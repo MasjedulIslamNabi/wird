@@ -1542,19 +1542,6 @@ function ContinuousPlayer({
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-60 w-full" />
-        </div>
-      </div>
-    );
-  }
-
   const effectiveStart = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeStart : 1;
   const effectiveEnd = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeEnd : 114;
 
@@ -1569,6 +1556,19 @@ function ContinuousPlayer({
       s.revelationType.toLowerCase().includes(q)
     );
   }, [surahs, surahSearch]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-60 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">

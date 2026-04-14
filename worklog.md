@@ -91,3 +91,39 @@ Stage Summary:
 - 10 mood categories with 40+ authentic Quran/Hadith quotes
 - Personalized dua for each detected mood
 - Build verified: `npx next build` succeeds
+---
+Task ID: 1
+Agent: Main
+Task: Add continuous Quran listening feature (Quran Radio) to Noor app
+
+Work Log:
+- Read and analyzed the full page.tsx (2575 lines) to understand the existing app structure
+- Added new icon imports: Headphones, SkipForward, SkipBack, Square, ListMusic, Repeat
+- Added 'listen' tab type to Home component, IslamicHeader, and MobileBottomNav
+- Added global player state (globalPlayer, globalAudioRef, playerMeta) in Home component for cross-tab audio persistence
+- Added MiniPlayer component rendering (visible when audio plays and user is on non-listen tab)
+- Added dynamic bottom padding (pb-36/pb-24) when mini-player is visible
+- Created SURAH_AYAH_STARTS pre-computed array (114 surah start ayah absolute numbers)
+- Created getSurahForAyah helper function to map absolute ayah numbers to surah/ayah-in-surah
+- Created ContinuousPlayer component (~500 lines) with:
+  - Reciter selector grid (6 famous imams)
+  - Play mode selector: Single Surah, Surah Range, All 114 Surahs
+  - Surah selection dropdowns with verse counts
+  - Full "Now Playing" card with progress bar, surah info, Arabic name
+  - Playback controls: Previous, Play/Pause, Next, Stop
+  - Auto-advance sequential audio playback across ayahs and surahs
+  - Toast notification on completion
+- Created MiniPlayer component (~100 lines) with:
+  - Persistent bottom bar above mobile nav
+  - Progress bar, surah name, verse count, reciter name
+  - Play/Pause, Next, Previous controls
+  - Works across all tabs
+- Updated Settings page to mention both English and Bengali translations
+- Build verified: compiled successfully
+
+Stage Summary:
+- New "Listen" tab added to navigation (desktop header + mobile bottom nav)
+- Quran Radio feature allows continuous listening with reciter selection
+- Users can choose: single surah, custom range, or all 114 surahs
+- Mini-player persists across tabs for uninterrupted listening
+- All 6 reciters available: Alafasy, Abdul Basit, Husary, Minshawi, Sudais, Muaiqly

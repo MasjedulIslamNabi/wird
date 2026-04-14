@@ -28,6 +28,12 @@ import {
   Info,
   Loader2,
   X,
+  Headphones,
+  SkipForward,
+  SkipBack,
+  Square,
+  ListMusic,
+  Repeat,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -312,7 +318,7 @@ function useToast() {
 // ─── Main Page Component ──────────────────────────────────
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'quran' | 'daily' | 'bookmarks' | 'settings'>('quran');
+  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings'>('quran');
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -393,13 +399,27 @@ export default function Home() {
 
   const { showToast } = useToast();
 
+  // Global player state for cross-tab mini-player
+  const [globalPlayer, setGlobalPlayer] = useState<{
+    isPlaying: boolean;
+    currentSurah: number;
+    currentAyah: number;
+    reciterId: string;
+    reciterName: string;
+    surahName: string;
+    surahNameAr: string;
+    totalInSurah: number;
+  } | null>(null);
+  const globalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playerMeta, setPlayerMeta] = useState<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>(null);
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--islamic-bg)] dark:bg-[#0F1A14] transition-colors duration-300">
       {/* Header */}
       <IslamicHeader activeTab={activeTab} setActiveTab={setActiveTab} setSelectedSurah={setSelectedSurah} isDark={isDark} toggleTheme={toggleTheme} />
 
       {/* Main Content */}
-      <main className="flex-1 pb-20 md:pb-4">
+      <main className={`flex-1 ${globalPlayer && activeTab !== 'listen' ? 'pb-36 md:pb-24' : 'pb-20 md:pb-4'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab + (selectedSurah ?? '')}
@@ -408,6 +428,16 @@ export default function Home() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
           >
+            {activeTab === 'listen' && (
+              <ContinuousPlayer
+                globalPlayer={globalPlayer}
+                setGlobalPlayer={setGlobalPlayer}
+                globalAudioRef={globalAudioRef}
+                playerMeta={playerMeta}
+                setPlayerMeta={setPlayerMeta}
+                showToast={showToast}
+              />
+            )}
             {activeTab === 'quran' && (
               selectedSurah !== null ? (
                 <SurahReader
@@ -452,6 +482,16 @@ export default function Home() {
         </AnimatePresence>
       </main>
 
+      {/* Mini Player (persistent across tabs) */}
+      {globalPlayer && activeTab !== 'listen' && (
+        <MiniPlayer
+          globalPlayer={globalPlayer}
+          globalAudioRef={globalAudioRef}
+          setGlobalPlayer={setGlobalPlayer}
+          playerMeta={playerMeta}
+        />
+      )}
+
       {/* Bottom Navigation (Mobile) */}
       <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} setSelectedSurah={setSelectedSurah} />
     </div>
@@ -468,13 +508,14 @@ function IslamicHeader({
   toggleTheme,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'daily' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings') => void;
   setSelectedSurah: (n: number | null) => void;
   isDark: boolean;
   toggleTheme: () => void;
 }) {
   const tabs = [
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
+    { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'Daily', icon: Sparkles },
     { id: 'bookmarks' as const, label: 'Bookmarks', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
@@ -546,11 +587,12 @@ function MobileBottomNav({
   setSelectedSurah,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'daily' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings') => void;
   setSelectedSurah: (n: number | null) => void;
 }) {
   const tabs = [
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
+    { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'Daily', icon: Sparkles },
     { id: 'bookmarks' as const, label: 'Saved', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
@@ -1042,6 +1084,787 @@ function SurahReader({
         ))}
       </div>
     </div>
+  );
+}
+
+
+// ─── Continuous Player ──────────────────────────────────────
+
+// Pre-computed surah ayah start numbers (absolute ayah number of first ayah in each surah)
+const SURAH_AYAH_STARTS: number[] = [
+  1, 8, 294, 494, 670, 790, 955, 1161, 1236, 1365,
+  1474, 1597, 1708, 1751, 1803, 1902, 2030, 2141, 2251, 2349,
+  2484, 2596, 2674, 2792, 2856, 2933, 3160, 3253, 3341, 3410,
+  3470, 3504, 3534, 3607, 3661, 3706, 3789, 3971, 4059, 4134,
+  4219, 4273, 4326, 4415, 4474, 4511, 4546, 4584, 4603, 4648,
+  4708, 4757, 4819, 4874, 4952, 5048, 5077, 5099, 5140, 5158,
+  5198, 5228, 5256, 5344, 5361, 5378, 5397, 5430, 5460, 5480,
+  5507, 5545, 5585, 5611, 5643, 5663, 5677, 5717, 5745, 5770,
+  5792, 5814, 5831, 5850, 5876, 5906, 5926, 5941, 5962, 5973,
+  5981, 5989, 6008, 6013, 6021, 6029, 6035, 6040, 6044, 6050,
+  6060, 6072, 6084, 6114, 6166, 6218, 6262, 6290, 6318, 6338,
+  6394, 6434, 6465, 6515, 6555, 6601, 6643, 6672, 6691, 6727,
+  6752, 6774, 6791, 6810, 6826, 6852, 6882, 6902, 6918, 6930,
+  6973, 7001,
+];
+
+function getSurahForAyah(ayahAbsolute: number, surahList: SurahInfo[]): { surahNumber: number; ayahInSurah: number } {
+  for (let i = surahList.length - 1; i >= 0; i--) {
+    if (ayahAbsolute >= SURAH_AYAH_STARTS[i]) {
+      return {
+        surahNumber: i + 1,
+        ayahInSurah: ayahAbsolute - SURAH_AYAH_STARTS[i] + 1,
+      };
+    }
+  }
+  return { surahNumber: 1, ayahInSurah: 1 };
+}
+
+function ContinuousPlayer({
+  globalPlayer,
+  setGlobalPlayer,
+  globalAudioRef,
+  playerMeta,
+  setPlayerMeta,
+  showToast,
+}: {
+  globalPlayer: {
+    isPlaying: boolean;
+    currentSurah: number;
+    currentAyah: number;
+    reciterId: string;
+    reciterName: string;
+    surahName: string;
+    surahNameAr: string;
+    totalInSurah: number;
+  } | null;
+  setGlobalPlayer: React.Dispatch<React.SetStateAction<{
+    isPlaying: boolean;
+    currentSurah: number;
+    currentAyah: number;
+    reciterId: string;
+    reciterName: string;
+    surahName: string;
+    surahNameAr: string;
+    totalInSurah: number;
+  } | null>>;
+  globalAudioRef: React.RefObject<HTMLAudioElement | null>;
+  playerMeta: { startSurah: number; endSurah: number; surahList: SurahInfo[] } | null;
+  setPlayerMeta: React.Dispatch<React.SetStateAction<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>>;
+  showToast: (msg: string) => void;
+}) {
+  const [surahs, setSurahs] = useState<SurahInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedReciter, setSelectedReciter] = useState(RECITERS[0]);
+  const [playMode, setPlayMode] = useState<'single' | 'range' | 'all'>('single');
+  const [selectedSurah, setSelectedSurah] = useState(1);
+  const [rangeStart, setRangeStart] = useState(1);
+  const [rangeEnd, setRangeEnd] = useState(114);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentAyahAbsolute, setCurrentAyahAbsolute] = useState(0);
+  const [playlist, setPlaylist] = useState<number[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const playlistRef = useRef<number[]>([]);
+  const trackIndexRef = useRef(0);
+
+  // Fetch surah list
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSurahs() {
+      try {
+        setLoading(true);
+        const res = await fetch(SURAH_LIST_URL);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        if (!cancelled) setSurahs(data.data);
+      } catch { /* ignore */ } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchSurahs();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Build playlist
+  const buildPlaylist = useCallback((start: number, end: number) => {
+    const tracks: number[] = [];
+    for (let s = start; s <= end; s++) {
+      const sIdx = s - 1;
+      const startAyah = SURAH_AYAH_STARTS[sIdx];
+      const count = surahs[sIdx]?.numberOfAyahs || 1;
+      for (let a = 0; a < count; a++) {
+        tracks.push(startAyah + a);
+      }
+    }
+    return tracks;
+  }, [surahs]);
+
+  const startPlaying = useCallback((trackIndex?: number) => {
+    if (surahs.length === 0) return;
+
+    let startS = selectedSurah;
+    let endS = selectedSurah;
+    if (playMode === 'range') {
+      startS = rangeStart;
+      endS = rangeEnd;
+    } else if (playMode === 'all') {
+      startS = 1;
+      endS = 114;
+    }
+
+    const tracks = buildPlaylist(startS, endS);
+    if (tracks.length === 0) return;
+
+    playlistRef.current = tracks;
+    setPlaylist(tracks);
+
+    const idx = trackIndex ?? 0;
+    trackIndexRef.current = idx;
+    setCurrentTrackIndex(idx);
+
+    const ayahAbs = tracks[idx];
+    setCurrentAyahAbsolute(ayahAbs);
+
+    const { surahNumber, ayahInSurah } = getSurahForAyah(ayahAbs, surahs);
+    const surahInfo = surahs[surahNumber - 1];
+    const totalAyahs = surahInfo?.numberOfAyahs || 1;
+
+    setPlayerMeta({ startSurah: startS, endSurah: endS, surahList: surahs });
+    setIsPlaying(true);
+    setGlobalPlayer({
+      isPlaying: true,
+      currentSurah: surahNumber,
+      currentAyah: ayahInSurah,
+      reciterId: selectedReciter.id,
+      reciterName: selectedReciter.name,
+      surahName: surahInfo?.englishName || `Surah ${surahNumber}`,
+      surahNameAr: surahInfo?.name || '',
+      totalInSurah: totalAyahs,
+    });
+
+    // Play audio
+    if (globalAudioRef.current) {
+      globalAudioRef.current.pause();
+      globalAudioRef.current = null;
+    }
+
+    const audio = new Audio(
+      `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${ayahAbs}.mp3`
+    );
+    globalAudioRef.current = audio;
+
+    audio.play().catch(() => {
+      showToast('Audio playback failed. Try again.');
+      setIsPlaying(false);
+      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+    });
+
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.onended = () => {
+      setProgress(0);
+      // Auto advance to next track
+      if (trackIndexRef.current < playlistRef.current.length - 1) {
+        trackIndexRef.current++;
+        const nextAyah = playlistRef.current[trackIndexRef.current];
+        setCurrentAyahAbsolute(nextAyah);
+        setCurrentTrackIndex(trackIndexRef.current);
+
+        const { surahNumber: sn, ayahInSurah: ai } = getSurahForAyah(nextAyah, surahs);
+        const si = surahs[sn - 1];
+        setGlobalPlayer(prev => prev ? {
+          ...prev,
+          currentSurah: sn,
+          currentAyah: ai,
+          surahName: si?.englishName || `Surah ${sn}`,
+          surahNameAr: si?.name || '',
+          totalInSurah: si?.numberOfAyahs || 1,
+        } : null);
+
+        const nextAudio = new Audio(
+          `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${nextAyah}.mp3`
+        );
+        globalAudioRef.current = nextAudio;
+        nextAudio.play().catch(() => {});
+        nextAudio.ontimeupdate = () => {
+          if (nextAudio.duration) {
+            setProgress((nextAudio.currentTime / nextAudio.duration) * 100);
+          }
+        };
+        nextAudio.onended = () => {
+          setProgress(0);
+          if (trackIndexRef.current < playlistRef.current.length - 1) {
+            // Recursive call handled by the same logic
+            nextAudio.onended = null;
+            startPlaying(trackIndexRef.current);
+          } else {
+            setIsPlaying(false);
+            setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+          }
+        };
+      } else {
+        setIsPlaying(false);
+        setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+        showToast('Recitation completed');
+      }
+    };
+  }, [surahs, selectedReciter, selectedSurah, playMode, rangeStart, rangeEnd, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef]);
+
+  const pausePlaying = useCallback(() => {
+    if (globalAudioRef.current) {
+      globalAudioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+  }, [globalAudioRef, setGlobalPlayer]);
+
+  const resumePlaying = useCallback(() => {
+    if (globalAudioRef.current && playlistRef.current.length > 0) {
+      globalAudioRef.current.play().catch(() => {});
+      setIsPlaying(true);
+      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: true } : null);
+    } else {
+      startPlaying(trackIndexRef.current);
+    }
+  }, [globalAudioRef, startPlaying, setGlobalPlayer]);
+
+  const skipNext = useCallback(() => {
+    if (trackIndexRef.current < playlistRef.current.length - 1) {
+      if (globalAudioRef.current) {
+        globalAudioRef.current.pause();
+        globalAudioRef.current.onended = null;
+      }
+      startPlaying(trackIndexRef.current + 1);
+    }
+  }, [startPlaying, globalAudioRef]);
+
+  const skipPrev = useCallback(() => {
+    if (trackIndexRef.current > 0) {
+      if (globalAudioRef.current) {
+        globalAudioRef.current.pause();
+        globalAudioRef.current.onended = null;
+      }
+      startPlaying(trackIndexRef.current - 1);
+    }
+  }, [startPlaying, globalAudioRef]);
+
+  const stopPlaying = useCallback(() => {
+    if (globalAudioRef.current) {
+      globalAudioRef.current.pause();
+      globalAudioRef.current.onended = null;
+      globalAudioRef.current.ontimeupdate = null;
+      globalAudioRef.current = null;
+    }
+    setIsPlaying(false);
+    setCurrentAyahAbsolute(0);
+    setProgress(0);
+    playlistRef.current = [];
+    trackIndexRef.current = 0;
+    setGlobalPlayer(null);
+    setPlayerMeta(null);
+  }, [globalAudioRef, setGlobalPlayer, setPlayerMeta]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (globalAudioRef.current) {
+        globalAudioRef.current.pause();
+        globalAudioRef.current.onended = null;
+      }
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-60 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  const effectiveStart = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeStart : 1;
+  const effectiveEnd = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeEnd : 114;
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951]/20 dark:to-[#C8A951]/5 flex items-center justify-center shadow-lg">
+            <Headphones className="w-8 h-8 text-[#C8A951]" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Quran Radio</h2>
+          <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Listen to the Noble Quran continuously</p>
+        </motion.div>
+      </div>
+
+      {/* Reciter Selector */}
+      <Card className="mb-4 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Volume2 className="w-4 h-4 text-[#C8A951]" />
+            <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Choose Reciter</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {RECITERS.map(r => (
+              <motion.button
+                key={r.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setSelectedReciter(r);
+                  if (isPlaying) {
+                    showToast(`Switched to ${r.name}. Restarting...`);
+                    stopPlaying();
+                  }
+                }}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  selectedReciter.id === r.id
+                    ? 'border-[#C8A951] bg-[#C8A951]/5 dark:bg-[#C8A951]/10'
+                    : 'border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951]/40'
+                }`}
+              >
+                <p className="text-xs font-semibold text-[#1A1A2E] dark:text-[#E8E0D0] truncate">{r.name}</p>
+                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5">{r.shortName}</p>
+              </motion.button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Play Mode */}
+      <Card className="mb-4 overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ListMusic className="w-4 h-4 text-[#C8A951]" />
+            <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">What to Listen</h3>
+          </div>
+          <div className="flex gap-2 mb-4">
+            {([
+              { mode: 'single' as const, label: 'Single Surah', icon: BookOpen },
+              { mode: 'range' as const, label: 'Surah Range', icon: SkipForward },
+              { mode: 'all' as const, label: 'All 114 Surahs', icon: Repeat },
+            ]).map(({ mode, label, icon: Icon }) => (
+              <button
+                key={mode}
+                onClick={() => setPlayMode(mode)}
+                className={`flex-1 flex items-center justify-center gap-1.5 p-3 rounded-xl border-2 text-xs font-medium transition-all duration-200 ${
+                  playMode === mode
+                    ? 'border-[#C8A951] bg-[#C8A951]/5 dark:bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                    : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#C8A951]/40'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Surah Selection */}
+          {playMode === 'single' && (
+            <div>
+              <label className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mb-1.5 block">Select Surah</label>
+              <select
+                value={selectedSurah}
+                onChange={e => setSelectedSurah(Number(e.target.value))}
+                className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
+              >
+                {surahs.map(s => (
+                  <option key={s.number} value={s.number}>
+                    {s.number}. {s.englishName} ({s.name}) - {s.numberOfAyahs} verses
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {playMode === 'range' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mb-1.5 block">From Surah</label>
+                <select
+                  value={rangeStart}
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    setRangeStart(v);
+                    if (v > rangeEnd) setRangeEnd(v);
+                  }}
+                  className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
+                >
+                  {surahs.map(s => (
+                    <option key={s.number} value={s.number}>
+                      {s.number}. {s.englishName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mb-1.5 block">To Surah</label>
+                <select
+                  value={rangeEnd}
+                  onChange={e => setRangeEnd(Number(e.target.value))}
+                  className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
+                >
+                  {surahs.filter(s => s.number >= rangeStart).map(s => (
+                    <option key={s.number} value={s.number}>
+                      {s.number}. {s.englishName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] text-center">
+                  Surah {rangeStart} to {rangeEnd} ({(() => {
+                    let total = 0;
+                    for (let i = rangeStart; i <= rangeEnd; i++) {
+                      total += surahs[i - 1]?.numberOfAyahs || 0;
+                    }
+                    return total;
+                  })()} verses, {rangeEnd - rangeStart + 1} surahs)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {playMode === 'all' && (
+            <div className="text-center py-3">
+              <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
+                All 114 Surahs will play continuously from <strong className="text-[#0D4B3C] dark:text-[#C8A951]">Al-Fatihah</strong> to <strong className="text-[#0D4B3C] dark:text-[#C8A951]">An-Nas</strong>
+              </p>
+              <p className="text-xs text-[#9CA3AF]/60 mt-1">Total: 6,236 verses</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Now Playing */}
+      {isPlaying && currentAyahAbsolute > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4"
+        >
+          <Card className="overflow-hidden border-2 border-[#C8A951]/30 shadow-lg">
+            <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+            <CardContent className="p-5">
+              {/* Progress Bar */}
+              <div className="w-full h-1.5 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden mb-5">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-[#C8A951] to-[#D4B96A] rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              {/* Surah Info */}
+              <div className="text-center mb-5">
+                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider mb-1">Now Reciting</p>
+                <div className="flex items-center justify-center gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0D4B3C] dark:text-[#C8A951]">
+                      {globalPlayer?.surahName}
+                    </h3>
+                    <p className="font-arabic text-xl text-[#0D4B3C]/70 dark:text-[#C8A951]/70">
+                      {globalPlayer?.surahNameAr}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+                  Verse {globalPlayer?.currentAyah} of {globalPlayer?.totalInSurah} • Track {currentTrackIndex + 1} of {playlist.length}
+                </p>
+                <p className="text-[10px] text-[#C8A951] mt-1 font-medium">
+                  {selectedReciter.name}
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={skipPrev}
+                  className="w-12 h-12 rounded-full bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/20 dark:hover:bg-[#C8A951]/20 transition-all"
+                >
+                  <SkipBack className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={pausePlaying}
+                  className="w-16 h-16 rounded-full bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] flex items-center justify-center text-white shadow-xl hover:shadow-2xl transition-all"
+                >
+                  <Pause className="w-7 h-7" />
+                </button>
+
+                <button
+                  onClick={skipNext}
+                  className="w-12 h-12 rounded-full bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/20 dark:hover:bg-[#C8A951]/20 transition-all"
+                >
+                  <SkipForward className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Stop Button */}
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={stopPlaying}
+                  className="gap-1.5 border-red-200 text-red-500 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950 text-xs"
+                >
+                  <Square className="w-3 h-3" />
+                  Stop
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Play Button */}
+      {!isPlaying && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <button
+            onClick={() => startPlaying(0)}
+            className="w-full py-5 rounded-2xl bg-gradient-to-r from-[#0D4B3C] via-[#145A48] to-[#1B6B52] dark:from-[#C8A951] dark:via-[#D4B96A] dark:to-[#C8A951] text-white dark:text-[#0D4B3C] font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Play className="w-6 h-6 ml-1" />
+            </motion.div>
+            {playMode === 'single'
+              ? `Play Surah ${surahs[selectedSurah - 1]?.englishName}`
+              : playMode === 'range'
+                ? `Play Surah ${rangeStart} to ${rangeEnd}`
+                : 'Play All 114 Surahs'
+            }
+            <span className="text-xs opacity-70 font-normal">• {selectedReciter.shortName}</span>
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── Mini Player (persistent across tabs) ──────────────────
+
+function MiniPlayer({
+  globalPlayer,
+  globalAudioRef,
+  setGlobalPlayer,
+  playerMeta,
+}: {
+  globalPlayer: {
+    isPlaying: boolean;
+    currentSurah: number;
+    currentAyah: number;
+    reciterId: string;
+    reciterName: string;
+    surahName: string;
+    surahNameAr: string;
+    totalInSurah: number;
+  };
+  globalAudioRef: React.RefObject<HTMLAudioElement | null>;
+  setGlobalPlayer: React.Dispatch<React.SetStateAction<{
+    isPlaying: boolean;
+    currentSurah: number;
+    currentAyah: number;
+    reciterId: string;
+    reciterName: string;
+    surahName: string;
+    surahNameAr: string;
+    totalInSurah: number;
+  } | null>>;
+  playerMeta: { startSurah: number; endSurah: number; surahList: SurahInfo[] } | null;
+}) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const audio = globalAudioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    return () => audio.removeEventListener('timeupdate', updateProgress);
+  }, [globalAudioRef, globalPlayer?.currentAyah]);
+
+  const togglePlay = () => {
+    const audio = globalAudioRef.current;
+    if (!audio) return;
+
+    if (globalPlayer.isPlaying) {
+      audio.pause();
+      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+    } else {
+      audio.play().catch(() => {});
+      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: true } : null);
+    }
+  };
+
+  const skipNext = () => {
+    const audio = globalAudioRef.current;
+    if (!audio || !playerMeta) return;
+
+    const { surahList } = playerMeta;
+    const currentSurahIdx = surahList.findIndex(s => s.number === globalPlayer.currentSurah);
+    if (currentSurahIdx < 0) return;
+
+    const currentSurah = surahList[currentSurahIdx];
+    const currentStartAyah = SURAH_AYAH_STARTS[currentSurahIdx];
+    const currentAbsolute = currentStartAyah + globalPlayer.currentAyah - 1;
+
+    // Check if there's a next surah in range
+    const nextSurahIdx = globalPlayer.currentAyah >= currentSurah.numberOfAyahs
+      ? currentSurahIdx + 1
+      : currentSurahIdx;
+    const nextAyahInSurah = globalPlayer.currentAyah >= currentSurah.numberOfAyahs
+      ? 1
+      : globalPlayer.currentAyah + 1;
+
+    if (nextSurahIdx < surahList.length && surahList[nextSurahIdx].number <= playerMeta.endSurah) {
+      const nextSurah = surahList[nextSurahIdx];
+      const nextAbsolute = SURAH_AYAH_STARTS[nextSurahIdx] + nextAyahInSurah - 1;
+
+      audio.pause();
+      audio.onended = null;
+      audio.ontimeupdate = null;
+
+      const nextAudio = new Audio(
+        `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${nextAbsolute}.mp3`
+      );
+      (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = nextAudio;
+      nextAudio.play().catch(() => {});
+
+      setGlobalPlayer({
+        ...globalPlayer,
+        isPlaying: true,
+        currentSurah: nextSurah.number,
+        currentAyah: nextAyahInSurah,
+        surahName: nextSurah.englishName,
+        surahNameAr: nextSurah.name,
+        totalInSurah: nextSurah.numberOfAyahs,
+      });
+      setProgress(0);
+    }
+  };
+
+  const skipPrev = () => {
+    const audio = globalAudioRef.current;
+    if (!audio || !playerMeta) return;
+
+    const { surahList } = playerMeta;
+    const currentSurahIdx = surahList.findIndex(s => s.number === globalPlayer.currentSurah);
+    if (currentSurahIdx < 0) return;
+
+    let prevAyahInSurah = globalPlayer.currentAyah - 1;
+    let prevSurahIdx = currentSurahIdx;
+
+    if (prevAyahInSurah < 1) {
+      if (prevSurahIdx > 0) {
+        prevSurahIdx--;
+        prevAyahInSurah = surahList[prevSurahIdx].numberOfAyahs;
+      } else {
+        prevAyahInSurah = 1;
+      }
+    }
+
+    if (surahList[prevSurahIdx].number >= playerMeta.startSurah) {
+      const prevSurah = surahList[prevSurahIdx];
+      const prevAbsolute = SURAH_AYAH_STARTS[prevSurahIdx] + prevAyahInSurah - 1;
+
+      audio.pause();
+      audio.onended = null;
+      audio.ontimeupdate = null;
+
+      const prevAudio = new Audio(
+        `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${prevAbsolute}.mp3`
+      );
+      (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = prevAudio;
+      prevAudio.play().catch(() => {});
+
+      setGlobalPlayer({
+        ...globalPlayer,
+        isPlaying: true,
+        currentSurah: prevSurah.number,
+        currentAyah: prevAyahInSurah,
+        surahName: prevSurah.englishName,
+        surahNameAr: prevSurah.name,
+        totalInSurah: prevSurah.numberOfAyahs,
+      });
+      setProgress(0);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ y: 80 }}
+      animate={{ y: 0 }}
+      className="fixed bottom-16 md:bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1a2420] border-t border-[#C8A951]/20 shadow-2xl"
+    >
+      {/* Progress bar */}
+      <div className="w-full h-1 bg-[#E5E1D8] dark:bg-[#2D3E34]">
+        <div className="h-full bg-gradient-to-r from-[#0D4B3C] to-[#C8A951] transition-all duration-300" style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+        {/* Surah Info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951] truncate">
+            {globalPlayer.surahName}
+          </p>
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+            Verse {globalPlayer.currentAyah} of {globalPlayer.totalInSurah} • {globalPlayer.reciterName.split('(')[0].trim()}
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={skipPrev}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
+          >
+            <SkipBack className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={togglePlay}
+            className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all ${
+              globalPlayer.isPlaying
+                ? 'bg-[#C8A951] text-white'
+                : 'bg-[#0D4B3C] dark:bg-[#C8A951] text-white'
+            }`}
+          >
+            {globalPlayer.isPlaying ? (
+              <Pause className="w-5 h-5" />
+            ) : (
+              <Play className="w-5 h-5 ml-0.5" />
+            )}
+          </button>
+
+          <button
+            onClick={skipNext}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
+          >
+            <SkipForward className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -2531,7 +3354,7 @@ function SettingsView({
             <div>
               <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Translation</p>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                English — Sahih International
+                English (Sahih International) & Bengali
               </p>
             </div>
           </div>

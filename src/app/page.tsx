@@ -1798,32 +1798,81 @@ function MoodQuiz({
       {/* Idle State */}
       {phase === 'idle' && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <Card className="overflow-hidden relative cursor-pointer group hover:shadow-lg transition-shadow duration-300"
+          <motion.div
+            className="relative cursor-pointer rounded-2xl overflow-hidden group"
             onClick={handleStart}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0D4B3C]/5 via-[#C8A951]/5 to-[#0D4B3C]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Heart className="w-7 h-7 text-white dark:text-[#0F1A14]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-[#0D4B3C] dark:text-[#C8A951] mb-1">
-                    How Are You Feeling?
-                  </h3>
-                  <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
-                    Answer a few questions and we&apos;ll share Quran verses and Hadiths that speak to your heart right now.
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-[#C8A951] group-hover:translate-x-1 transition-transform" />
+            {/* Animated background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0D4B3C] via-[#145A48] to-[#1B6B52] dark:from-[#C8A951] dark:via-[#B89840] dark:to-[#A68B3A]" />
+
+            {/* Animated decorative circles */}
+            <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 animate-[pulse_4s_ease-in-out_infinite]" />
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/5 animate-[pulse_5s_ease-in-out_infinite_1s]" />
+            <div className="absolute top-1/2 right-1/4 w-24 h-24 rounded-full bg-[#C8A951]/10 dark:bg-white/10 animate-[pulse_3s_ease-in-out_infinite_0.5s]" />
+
+            {/* Floating stars */}
+            <motion.div
+              className="absolute top-4 right-6 text-[#C8A951]/60 dark:text-white/40"
+              animate={{ y: [-4, 4, -4], rotate: [0, 15, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Sparkles className="w-5 h-5" />
+            </motion.div>
+            <motion.div
+              className="absolute bottom-6 left-8 text-[#C8A951]/40 dark:text-white/30"
+              animate={{ y: [3, -3, 3], rotate: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            >
+              <Star className="w-4 h-4" />
+            </motion.div>
+            <motion.div
+              className="absolute top-1/3 left-4 text-[#C8A951]/30 dark:text-white/20"
+              animate={{ y: [-2, 5, -2] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+            >
+              <Sparkles className="w-3 h-3" />
+            </motion.div>
+
+            {/* Glowing heart icon */}
+            <motion.div
+              className="relative z-10 mx-auto pt-8 mb-3"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <div className="w-20 h-20 mx-auto rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/10">
+                <Heart className="w-10 h-10 text-white" />
               </div>
-            </CardContent>
-          </Card>
+            </motion.div>
+
+            {/* Text content */}
+            <div className="relative z-10 text-center px-6 pb-8">
+              <motion.h3
+                className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight"
+                animate={{ opacity: [0.85, 1, 0.85] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                How Are You Feeling Right Now?
+              </motion.h3>
+              <p className="text-white/80 text-sm sm:text-base max-w-md mx-auto mb-5 leading-relaxed">
+                Answer a few heartfelt questions and discover Quranic verses &amp; Hadiths tailored to your emotional state.
+              </p>
+
+              {/* CTA Button */}
+              <motion.div
+                className="inline-flex items-center gap-2 bg-white text-[#0D4B3C] dark:bg-[#0F1A14] dark:text-[#C8A951] px-6 py-3 rounded-xl font-semibold text-sm shadow-lg group-hover:shadow-xl transition-shadow duration-300"
+                whileHover={{ x: 4 }}
+              >
+                Begin Your Journey
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </motion.div>
+            </div>
+          </motion.div>
         </motion.div>
       )}
 

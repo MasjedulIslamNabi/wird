@@ -1214,19 +1214,6 @@ function ContinuousPlayer({
     return () => { cancelled = true; };
   }, []);
 
-  // Auto-play when navigated from My Space mood suggestion
-  useEffect(() => {
-    if (autoPlaySurah && surahs.length > 0 && !loading) {
-      setPlayMode('single');
-      setSelectedSurah(autoPlaySurah);
-      onAutoPlayConsumed();
-      const timer = setTimeout(() => {
-        playSurahDirect(autoPlaySurah);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [autoPlaySurah, surahs, loading, onAutoPlayConsumed, playSurahDirect]);
-
   // Fetch verses for caption display when current surah changes during playback
   useEffect(() => {
     if (!isPlaying || currentAyahAbsolute <= 0 || surahs.length === 0) return;
@@ -1541,6 +1528,19 @@ function ContinuousPlayer({
       setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
     };
   }, [surahs, selectedReciter, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef, startPlaying]);
+
+  // Auto-play when navigated from My Space mood suggestion
+  useEffect(() => {
+    if (autoPlaySurah && surahs.length > 0 && !loading) {
+      setPlayMode('single');
+      setSelectedSurah(autoPlaySurah);
+      onAutoPlayConsumed();
+      const timer = setTimeout(() => {
+        playSurahDirect(autoPlaySurah);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlaySurah, surahs, loading, onAutoPlayConsumed, playSurahDirect]);
 
   // Ref-based version for auto-play from external navigation
   const startPlayingRef = useRef<(surahNumber?: number) => void>(() => {});

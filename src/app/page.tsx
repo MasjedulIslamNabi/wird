@@ -1131,7 +1131,906 @@ function SurahReader({
   );
 }
 
+
+// ─── Mood Quiz Types & Data ────────────────────────────────
+
+type MoodCategory = 'sad' | 'anxious' | 'angry' | 'grateful' | 'lonely' | 'stressed' | 'hopeful' | 'seeking' | 'peaceful' | 'repentant';
+
+interface MoodQuestion {
+  id: number;
+  question: string;
+  options: {
+    label: string;
+    moodTags: MoodCategory[];
+  }[];
+}
+
+interface MoodQuote {
+  textAr: string;
+  textEn: string;
+  source: string;
+  type: 'quran' | 'hadith';
+  reference: string;
+}
+
+interface MoodProfile {
+  primaryMood: MoodCategory;
+  secondaryMoods: MoodCategory[];
+  quotes: MoodQuote[];
+  duaAr: string;
+  duaEn: string;
+  message: string;
+  title: string;
+}
+
+const MOOD_LABELS: Record<MoodCategory, { label: string; icon: string; color: string }> = {
+  sad: { label: 'Seeking Comfort', icon: 'broken-heart', color: '#6366F1' },
+  anxious: { label: 'Finding Peace', icon: 'wind', color: '#8B5CF6' },
+  angry: { label: 'Needing Patience', icon: 'flame', color: '#EF4444' },
+  grateful: { label: 'Feeling Grateful', icon: 'sun', color: '#F59E0B' },
+  lonely: { label: 'Seeking Connection', icon: 'cloud', color: '#64748B' },
+  stressed: { label: 'Under Pressure', icon: 'zap', color: '#F97316' },
+  hopeful: { label: 'Full of Hope', icon: 'sparkles', color: '#10B981' },
+  seeking: { label: 'Seeking Guidance', icon: 'compass', color: '#3B82F6' },
+  peaceful: { label: 'At Peace', icon: 'leaf', color: '#059669' },
+  repentant: { label: 'Returning to Allah', icon: 'heart', color: '#EC4899' },
+};
+
+const MOOD_QUESTIONS: MoodQuestion[] = [
+  {
+    id: 1,
+    question: 'How would you describe your overall mood right now?',
+    options: [
+      { label: 'Feeling down or heavy-hearted', moodTags: ['sad', 'lonely'] },
+      { label: 'Worried or uneasy about something', moodTags: ['anxious', 'stressed'] },
+      { label: 'Frustrated or upset about a situation', moodTags: ['angry', 'stressed'] },
+      { label: 'Calm, content, and at ease', moodTags: ['peaceful', 'grateful'] },
+    ],
+  },
+  {
+    id: 2,
+    question: 'How has your relationship with Allah felt lately?',
+    options: [
+      { label: 'Distant — I feel disconnected from my faith', moodTags: ['lonely', 'repentant', 'seeking'] },
+      { label: 'I want to improve but feel stuck in bad habits', moodTags: ['repentant', 'stressed'] },
+      { label: 'Close — I feel grateful for His blessings', moodTags: ['grateful', 'peaceful', 'hopeful'] },
+      { label: 'I am actively seeking to grow spiritually', moodTags: ['seeking', 'hopeful'] },
+    ],
+  },
+  {
+    id: 3,
+    question: 'Are you currently facing any challenges in your life?',
+    options: [
+      { label: 'Emotional pain — grief, heartbreak, or loss', moodTags: ['sad', 'lonely'] },
+      { label: 'Financial or career difficulties', moodTags: ['stressed', 'anxious'] },
+      { label: 'Relationship or family conflicts', moodTags: ['angry', 'sad'] },
+      { label: 'No major challenges — life is going well', moodTags: ['grateful', 'peaceful', 'hopeful'] },
+    ],
+  },
+  {
+    id: 4,
+    question: 'How is your Salah (prayer) routine these days?',
+    options: [
+      { label: 'I have been missing prayers and feel guilty about it', moodTags: ['repentant', 'sad'] },
+      { label: 'I pray but my mind often wanders — I feel distracted', moodTags: ['anxious', 'seeking'] },
+      { label: 'I am trying to be more consistent and mindful', moodTags: ['hopeful', 'seeking'] },
+      { label: 'Alhamdulillah, I pray regularly and find peace in it', moodTags: ['peaceful', 'grateful'] },
+    ],
+  },
+  {
+    id: 5,
+    question: 'What area of your life needs the most support right now?',
+    options: [
+      { label: 'My mental health and emotional well-being', moodTags: ['sad', 'anxious', 'stressed'] },
+      { label: 'My faith — I want to feel closer to Allah', moodTags: ['seeking', 'repentant', 'lonely'] },
+      { label: 'My relationships with family or friends', moodTags: ['angry', 'lonely'] },
+      { label: 'Finding purpose and direction in life', moodTags: ['seeking', 'hopeful'] },
+    ],
+  },
+  {
+    id: 6,
+    question: 'How connected do you feel to the people around you?',
+    options: [
+      { label: 'Very isolated — I feel like no one understands me', moodTags: ['lonely', 'sad'] },
+      { label: 'There is tension or conflict in my relationships', moodTags: ['angry', 'stressed'] },
+      { label: 'I have people around me but I still feel a void inside', moodTags: ['lonely', 'seeking'] },
+      { label: 'Surrounded by supportive people — I feel blessed', moodTags: ['grateful', 'peaceful'] },
+    ],
+  },
+  {
+    id: 7,
+    question: 'What would help you the most right now?',
+    options: [
+      { label: 'Comfort and reassurance that things will get better', moodTags: ['sad', 'hopeful'] },
+      { label: 'Strength to be patient with my situation', moodTags: ['angry', 'stressed'] },
+      { label: 'Forgiveness and a fresh start', moodTags: ['repentant', 'anxious'] },
+      { label: 'Gratitude and appreciation for what I already have', moodTags: ['grateful', 'peaceful'] },
+    ],
+  },
+];
+
+const MOOD_QUOTES: Record<MoodCategory, MoodQuote[]> = {
+  sad: [
+    {
+      textAr: 'وَلَا تَهِنُوا وَلَا تَحْزَنُوا وَأَنتُمُ الْأَعْلَوْنَ إِن كُنتُم مُّؤْمِنِينَ',
+      textEn: 'Do not lose heart or grieve, for you will have the upper hand, if you are believers.',
+      source: 'Surah Ali Imran 3:139',
+      type: 'quran',
+      reference: '3:139',
+    },
+    {
+      textAr: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+      textEn: 'Indeed, with hardship comes ease.',
+      source: 'Surah Ash-Sharh 94:6',
+      type: 'quran',
+      reference: '94:6',
+    },
+    {
+      textAr: 'وَبَشِّرِ الصَّابِرِينَ الَّذِينَ إِذَا أَصَابَتْهُم مُّصِيبَةٌ قَالُوا إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ',
+      textEn: 'And give good tidings to those who are patient, who, when disaster strikes them, say, "Indeed we belong to Allah, and indeed to Him we return."',
+      source: 'Surah Al-Baqarah 2:155-156',
+      type: 'quran',
+      reference: '2:155-156',
+    },
+    {
+      textAr: 'لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا',
+      textEn: 'Allah does not burden a soul beyond that it can bear.',
+      source: 'Surah Al-Baqarah 2:286',
+      type: 'quran',
+      reference: '2:286',
+    },
+    {
+      textAr: 'قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنفُسِهِمْ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ',
+      textEn: 'Say, "O My servants who have transgressed against themselves, do not despair of the mercy of Allah."',
+      source: 'Surah Az-Zumar 39:53',
+      type: 'quran',
+      reference: '39:53',
+    },
+  ],
+  anxious: [
+    {
+      textAr: 'وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ',
+      textEn: 'And whoever relies upon Allah — then He is sufficient for him.',
+      source: 'Surah At-Talaq 65:3',
+      type: 'quran',
+      reference: '65:3',
+    },
+    {
+      textAr: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+      textEn: 'Verily, in the remembrance of Allah do hearts find rest.',
+      source: 'Surah Ar-Ra\'d 13:28',
+      type: 'quran',
+      reference: '13:28',
+    },
+    {
+      textAr: 'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ',
+      textEn: 'And when My servants ask you concerning Me, indeed I am near.',
+      source: 'Surah Al-Baqarah 2:186',
+      type: 'quran',
+      reference: '2:186',
+    },
+    {
+      textAr: 'كُلًّا نُّمِدُّ هَٰؤُلَاءِ وَهَٰؤُلَاءِ مِنْ عَطَاءِ رَبِّكَ وَمَا كَانَ عَطَاءُ رَبِّكَ مَحْظُورًا',
+      textEn: 'These — We extend to them from Our bounty — these and others, and there is no restriction on the bounty of your Lord.',
+      source: 'Surah Al-Isra 17:20',
+      type: 'quran',
+      reference: '17:20',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "If you put your trust completely in Allah, He would provide for you as He provides for the birds. They go out in the morning empty and return in the evening full."',
+      textEn: 'If you put your trust completely in Allah, He would provide for you as He provides for the birds. They go out in the morning empty and return in the evening full.',
+      source: 'Sunan at-Tirmidhi 2344',
+      type: 'hadith',
+      reference: 'Tirmidhi 2344',
+    },
+  ],
+  angry: [
+    {
+      textAr: 'وَالْكَاظِمِينَ الْغَيْظَ وَالْعَافِينَ عَنِ النَّاسِ ۗ وَاللَّهُ يُحِبُّ الْمُحْسِنِينَ',
+      textEn: 'And those who restrain anger and who pardon the people — and Allah loves the doers of good.',
+      source: 'Surah Ali Imran 3:134',
+      type: 'quran',
+      reference: '3:134',
+    },
+    {
+      textAr: 'وَلَمَن صَبَرَ وَغَفَرَ ذَٰلِكَ لَمِنْ عَزْمِ الْأُمُورِ',
+      textEn: 'But indeed, whoever is patient and forgives — that is a sign of determination and resolve.',
+      source: 'Surah Ash-Shura 42:43',
+      type: 'quran',
+      reference: '42:43',
+    },
+    {
+      textAr: 'وَاسْتَحْيُوا مِنَ اللَّهِ حَقَّ حَيَائِهِ',
+      textEn: 'The strong man is not the one who can overpower others. The strong man is the one who controls himself when he is angry.',
+      source: 'Sahih al-Bukhari 6114',
+      type: 'hadith',
+      reference: 'Bukhari 6114',
+    },
+    {
+      textAr: 'فَبِمَا رَحْمَةٍ مِّنَ اللَّهِ لِنتَ لَهُمْ ۖ وَلَوْ كُنتَ فَظًّا غَلِيظَ الْقَلْبِ لَانفَضُّوا مِنْ حَوْلِكَ',
+      textEn: 'So by mercy from Allah, you were lenient with them. And if you had been rude and harsh in heart, they would have disbanded from about you.',
+      source: 'Surah Ali Imran 3:159',
+      type: 'quran',
+      reference: '3:159',
+    },
+  ],
+  grateful: [
+    {
+      textAr: 'لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ',
+      textEn: 'If you are grateful, I will surely give you more.',
+      source: 'Surah Ibrahim 14:7',
+      type: 'quran',
+      reference: '14:7',
+    },
+    {
+      textAr: 'وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ وَلَئِن كَفَرْتُمْ إِنَّ عَذَابِي لَشَدِيدٌ',
+      textEn: 'And remember when your Lord proclaimed, "If you are grateful, I will surely increase you; but if you deny, indeed, My punishment is severe."',
+      source: 'Surah Ibrahim 14:7',
+      type: 'quran',
+      reference: '14:7',
+    },
+    {
+      textAr: 'وَمَا بِكُم مِّن نِّعْمَةٍ فَمِنَ اللَّهِ',
+      textEn: 'And whatever you have of blessing — it is from Allah.',
+      source: 'Surah An-Nahl 16:53',
+      type: 'quran',
+      reference: '16:53',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "Look at those who are below you and do not look at those above you, for this is more deserving of not belittling the blessing of Allah upon you."',
+      textEn: 'Look at those who are below you and do not look at those above you, for this is more deserving of not belittling the blessing of Allah upon you.',
+      source: 'Sahih al-Bukhari 6469',
+      type: 'hadith',
+      reference: 'Bukhari 6469',
+    },
+    {
+      textAr: 'هُوَ الَّذِي جَعَلَ لَكُمُ اللَّيْلَ لِتَسْكُنُوا فِيهِ وَالنَّهَارَ مُبْصِرًا ۚ إِنَّ فِي ذَٰلِكَ لَآيَاتٍ لِّقَوْمٍ يَسْمَعُونَ',
+      textEn: 'It is He who made for you the night that you may rest therein and the day, giving sight. Indeed in that are signs for a people who listen.',
+      source: 'Surah Yunus 10:67',
+      type: 'quran',
+      reference: '10:67',
+    },
+  ],
+  lonely: [
+    {
+      textAr: 'وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ الْوَرِيدِ',
+      textEn: 'And We are closer to him than his jugular vein.',
+      source: 'Surah Qaf 50:16',
+      type: 'quran',
+      reference: '50:16',
+    },
+    {
+      textAr: 'وَهُوَ مَعَكُمْ أَيْنَ مَا كُنتُمْ',
+      textEn: 'And He is with you wherever you are.',
+      source: 'Surah Al-Hadid 57:4',
+      type: 'quran',
+      reference: '57:4',
+    },
+    {
+      textAr: 'فَأَيْنَمَا تُوَلُّوا فَثَمَّ وَجْهُ اللَّهِ',
+      textEn: 'So wherever you turn, there is the Face of Allah.',
+      source: 'Surah Al-Baqarah 2:115',
+      type: 'quran',
+      reference: '2:115',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "The hearts of the children of Adam are all between two fingers of the Most Merciful, like one heart. He directs them wherever He wills."',
+      textEn: 'The hearts of the children of Adam are all between two fingers of the Most Merciful, like one heart. He directs them wherever He wills.',
+      source: 'Sahih Muslim 2654',
+      type: 'hadith',
+      reference: 'Muslim 2654',
+    },
+  ],
+  stressed: [
+    {
+      textAr: 'فَإِنَّ مَعَ الْعُسْرِ يُسْرًا إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+      textEn: 'For indeed, with hardship will be ease. Indeed, with hardship will be ease.',
+      source: 'Surah Ash-Sharh 94:5-6',
+      type: 'quran',
+      reference: '94:5-6',
+    },
+    {
+      textAr: 'لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ',
+      textEn: 'Allah does not burden a soul beyond that it can bear. It will have whatever it has earned, and it will be accountable for whatever it has earned.',
+      source: 'Surah Al-Baqarah 2:286',
+      type: 'quran',
+      reference: '2:286',
+    },
+    {
+      textAr: 'رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ',
+      textEn: 'Our Lord, pour upon us patience and make us firm in our footing and help us against the disbelieving people.',
+      source: 'Surah Al-Baqarah 2:250',
+      type: 'quran',
+      reference: '2:250',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "Wonderful is the affair of the believer, for his affair is all good. If something good happens to him, he is grateful for it, and that is good for him. If something bad happens to him, he bears it with patience, and that is good for him."',
+      textEn: 'Wonderful is the affair of the believer, for his affair is all good. If something good happens to him, he is grateful for it, and that is good for him. If something bad happens to him, he bears it with patience, and that is good for him.',
+      source: 'Sahih Muslim 2999',
+      type: 'hadith',
+      reference: 'Muslim 2999',
+    },
+    {
+      textAr: 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ',
+      textEn: 'And whoever fears Allah — He will make for him a way out. And will provide for him from where he does not expect.',
+      source: 'Surah At-Talaq 65:2-3',
+      type: 'quran',
+      reference: '65:2-3',
+    },
+  ],
+  hopeful: [
+    {
+      textAr: 'وَرَحْمَتِي وَسِعَتْ كُلَّ شَيْءٍ',
+      textEn: 'And My mercy encompasses all things.',
+      source: 'Surah Al-A\'raf 7:156',
+      type: 'quran',
+      reference: '7:156',
+    },
+    {
+      textAr: 'إِنَّ اللَّهَ لَا يُظْلِمُ النَّاسَ شَيْئًا وَلَٰكِنَّ النَّاسَ أَنفُسَهُمْ يَظْلِمُونَ',
+      textEn: 'Indeed, Allah does not wrong the people at all, but it is the people who wrong themselves.',
+      source: 'Surah Yunus 10:44',
+      type: 'quran',
+      reference: '10:44',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "Allah the Almighty said: I am as My servant thinks of Me. So let him think of Me as he wishes."',
+      textEn: 'Allah the Almighty said: I am as My servant thinks of Me. So let him think of Me as he wishes.',
+      source: 'Sahih al-Bukhari 7405',
+      type: 'hadith',
+      reference: 'Bukhari 7405',
+    },
+    {
+      textAr: 'عَسَىٰ أَن يَبْعَثَكَ رَبُّكَ مَقَامًا مَّحْمُودًا',
+      textEn: 'Perhaps your Lord will raise you to a praiseworthy station.',
+      source: 'Surah Al-Isra 17:79',
+      type: 'quran',
+      reference: '17:79',
+    },
+  ],
+  seeking: [
+    {
+      textAr: 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
+      textEn: 'Guide us to the straight path.',
+      source: 'Surah Al-Fatihah 1:6',
+      type: 'quran',
+      reference: '1:6',
+    },
+    {
+      textAr: 'وَيَهْدِيَكُمْ صِرَاطًا مُّسْتَقِيمًا',
+      textEn: 'And will guide you to a straight path.',
+      source: 'Surah Al-Fath 48:2',
+      type: 'quran',
+      reference: '48:2',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "Whoever Allah wishes good for, He gives him understanding of the religion."',
+      textEn: 'Whoever Allah wishes good for, He gives him understanding of the religion.',
+      source: 'Sahih al-Bukhari 71',
+      type: 'hadith',
+      reference: 'Bukhari 71',
+    },
+    {
+      textAr: 'قُلْ رَبِّ زِدْنِي عِلْمًا',
+      textEn: 'Say, "My Lord, increase me in knowledge."',
+      source: 'Surah Ta-Ha 20:114',
+      type: 'quran',
+      reference: '20:114',
+    },
+    {
+      textAr: 'وَلَقَدْ صَرَّفْنَا لِلنَّاسِ فِي هَٰذَا الْقُرْآنِ مِن كُلِّ مَثَلٍ وَلَئِن جِئْتَهُم بِآيَةٍ لَّيَقُولَنَّ الَّذِينَ كَفَرُوا إِنْ أَنتُمْ إِلَّا مُبْطِلُونَ',
+      textEn: 'And We have certainly presented for the people in this Quran from every kind of example — but most of the people refuse to believe.',
+      source: 'Surah Ar-Rum 30:58',
+      type: 'quran',
+      reference: '30:58',
+    },
+  ],
+  peaceful: [
+    {
+      textAr: 'هُوَ الَّذِي أَنزَلَ السَّكِينَةَ فِي قُلُوبِ الْمُؤْمِنِينَ لِيَزْدَادُوا إِيمَانًا مَّعَ إِيمَانِهِمْ',
+      textEn: 'It is He who sent down tranquility into the hearts of the believers that they would increase in faith along with their faith.',
+      source: 'Surah Al-Fath 48:4',
+      type: 'quran',
+      reference: '48:4',
+    },
+    {
+      textAr: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+      textEn: 'Verily, in the remembrance of Allah do hearts find rest.',
+      source: 'Surah Ar-Ra\'d 13:28',
+      type: 'quran',
+      reference: '13:28',
+    },
+    {
+      textAr: 'الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+      textEn: 'Those who have believed and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured.',
+      source: 'Surah Ar-Ra\'d 13:28',
+      type: 'quran',
+      reference: '13:28',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "The example of a house in which Allah is remembered and a house in which Allah is not remembered is like the living and the dead."',
+      textEn: 'The example of a house in which Allah is remembered and a house in which Allah is not remembered is like the living and the dead.',
+      source: 'Sahih Muslim 779',
+      type: 'hadith',
+      reference: 'Muslim 779',
+    },
+  ],
+  repentant: [
+    {
+      textAr: 'قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنفُسِهِمْ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا',
+      textEn: 'Say, "O My servants who have transgressed against themselves, do not despair of the mercy of Allah. Indeed, Allah forgives all sins."',
+      source: 'Surah Az-Zumar 39:53',
+      type: 'quran',
+      reference: '39:53',
+    },
+    {
+      textAr: 'إِلَّا مَن تَابَ وَآمَنَ وَعَمِلَ عَمَلًا صَالِحًا فَأُولَٰئِكَ يُبَدِّلُ اللَّهُ سَيِّئَاتِهِمْ حَسَنَاتٍ',
+      textEn: 'Except for those who repent, believe and do righteous deeds — for them Allah will replace their evil deeds with good deeds.',
+      source: 'Surah Al-Furqan 25:70',
+      type: 'quran',
+      reference: '25:70',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "Allah extends His hand at night to accept the repentance of the one who sinned during the day, and He extends His hand during the day to accept the repentance of the one who sinned at night."',
+      textEn: 'Allah extends His hand at night to accept the repentance of the one who sinned during the day, and He extends His hand during the day to accept the repentance of the one who sinned at night.',
+      source: 'Sahih Muslim 2759',
+      type: 'hadith',
+      reference: 'Muslim 2759',
+    },
+    {
+      textAr: 'وَهُوَ الَّذِي يَقْبَلُ التَّوْبَةَ عَنْ عِبَادِهِ وَيَعْفُو عَنِ السَّيِّئَاتِ',
+      textEn: 'And it is He who accepts repentance from His servants and pardons misdeeds.',
+      source: 'Surah Ash-Shura 42:25',
+      type: 'quran',
+      reference: '42:25',
+    },
+    {
+      textAr: 'The Prophet (PBUH) said: "By Allah, Allah is more pleased with the repentance of His servant than one of you who finds his camel after having lost it in a desolate land."',
+      textEn: 'By Allah, Allah is more pleased with the repentance of His servant than one of you who finds his camel after having lost it in a desolate land.',
+      source: 'Sahih al-Bukhari 6309',
+      type: 'hadith',
+      reference: 'Bukhari 6309',
+    },
+  ],
+};
+
+const MOOD_DUAS: Record<MoodCategory, { arabic: string; english: string }> = {
+  sad: {
+    arabic: 'اللَّهُمَّ إِنِّي عَبْدُكَ ابْنُ عَبْدِكَ ابْنُ أَمَتِكَ نَاصِيَتِي بِيَدِكَ مَاضٍ فِيَّ حُكْمُكَ عَدْلٌ فِيَّ قَضَاؤُكَ',
+    english: 'O Allah, I am Your servant, son of Your servant, son of Your maid. My forelock is in Your hand, Your command over me is forever executed and Your decree over me is just.',
+  },
+  anxious: {
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
+    english: 'Allah is sufficient for me. There is no deity except Him. Upon Him I have relied, and He is the Lord of the Great Throne.',
+  },
+  angry: {
+    arabic: 'اللَّهُمَّ اغْفِرْ لِي ذَنْبِي وَأَطْهِرْ قَلْبِي وَحَصِّنْ فَرْجِي',
+    english: 'O Allah, forgive my sin, purify my heart, and guard my chastity.',
+  },
+  grateful: {
+    arabic: 'اللَّهُمَّ لَكَ الْحَمْدُ كَمَا يَنْبَغِي لِجَلَالِ وَجْهِكَ وَلِعَظِيمِ سُلْطَانِكَ',
+    english: 'O Allah, all praise is due to You as much as befits the glory of Your face and the greatness of Your authority.',
+  },
+  lonely: {
+    arabic: 'اللَّهُمَّ أَنْتَ الصَّاحِبُ فِي السَّفَرِ وَالْخَلِيفَةُ فِي الْأَهْلِ',
+    english: 'O Allah, You are the Companion during travel and the Guardian of the family.',
+  },
+  stressed: {
+    arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ',
+    english: 'There is no power and no strength except with Allah, the Most High, the Most Great.',
+  },
+  hopeful: {
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
+    english: 'My Lord, expand for me my breast and ease for me my task.',
+  },
+  seeking: {
+    arabic: 'اللَّهُمَّ أَرْنِي الْحَقَّ حَقًّا وَارْزُقْنِي اتِّبَاعَهُ وَأَرْنِي الْبَاطِلَ بَاطِلًا وَارْزُقْنِي اجْتِنَابَهُ',
+    english: 'O Allah, show me the truth as truth and enable me to follow it, and show me falsehood as falsehood and enable me to avoid it.',
+  },
+  peaceful: {
+    arabic: 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+    english: 'Our Lord, give us good in this world and good in the Hereafter, and protect us from the punishment of the Fire.',
+  },
+  repentant: {
+    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ وَأَنَا عَلَىٰ عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ',
+    english: 'O Allah, You are my Lord. There is no deity except You. You created me, and I am Your servant. I am upon Your covenant and Your promise as much as I am able. I seek refuge in You from the evil of what I have done. I acknowledge Your blessing upon me, and I acknowledge my sin. So forgive me, for there is none who can forgive sins except You.',
+  },
+};
+
+const MOOD_MESSAGES: Record<MoodCategory, { title: string; message: string }> = {
+  sad: {
+    title: 'Comfort for Your Heart',
+    message: 'Sadness is a natural part of the human experience, and Allah knows your pain. The Quran reminds us that after every difficulty comes ease. Allow these verses to wrap your heart in the warmth of Allah\'s mercy.',
+  },
+  anxious: {
+    title: 'Find Your Peace',
+    message: 'Worry and anxiety weigh heavy on the heart, but Allah has promised that whoever trusts in Him will find peace. These verses are a reminder that you are never alone in your worries, and Allah\'s plan is always the best.',
+  },
+  angry: {
+    title: 'Path of Patience',
+    message: 'Anger is natural, but how we respond to it defines us. Islam teaches us that controlling anger is a sign of true strength. These verses and teachings will help you find calm and channel your emotions positively.',
+  },
+  grateful: {
+    title: 'Count Your Blessings',
+    message: 'Gratitude is the key that unlocks even more of Allah\'s blessings. When you are thankful for what you have, Allah promises to increase you. Let these verses deepen your sense of shukr.',
+  },
+  lonely: {
+    title: 'You Are Never Alone',
+    message: 'Even when you feel most isolated, Allah is closer to you than your own heartbeat. The Quran reminds us that He is always with us, watching over us, and caring for us in ways we cannot perceive.',
+  },
+  stressed: {
+    title: 'Ease After Hardship',
+    message: 'The burden you carry may feel heavy, but Allah never gives you more than you can bear. These verses are a powerful reminder that ease follows hardship, and that every difficulty is an opportunity for growth and reward.',
+  },
+  hopeful: {
+    title: 'Allah\'s Mercy Is Vast',
+    message: 'Your hope in Allah is one of the greatest blessings. Never underestimate the power of a positive expectation from your Lord. These verses celebrate the beautiful relationship between a hopeful servant and a merciful Creator.',
+  },
+  seeking: {
+    title: 'Allah Is the Guide',
+    message: 'The desire to seek guidance itself is a gift from Allah. He loves those who seek knowledge, direction, and closeness to Him. These verses will illuminate your path and bring clarity to your heart.',
+  },
+  peaceful: {
+    title: 'Guard Your Peace',
+    message: 'Inner peace is a treasure that comes from the remembrance of Allah. Alhamdulillah for the tranquility in your heart. These verses will help you protect and deepen the serenity you already feel.',
+  },
+  repentant: {
+    title: 'Allah Loves the Returning',
+    message: 'No matter how far you feel you have gone, the door of repentance is always open. Allah\'s mercy is vaster than your sins. These verses and Hadiths are a reminder that returning to Allah is the most beautiful journey you can take.',
+  },
+};
+
+function calculateMoodProfile(answers: number[]): MoodProfile {
+  const tagCounts: Record<string, number> = {};
+  answers.forEach((optionIndex, questionIndex) => {
+    const question = MOOD_QUESTIONS[questionIndex];
+    if (question && question.options[optionIndex]) {
+      question.options[optionIndex].moodTags.forEach((tag) => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    }
+  });
+
+  const sorted = Object.entries(tagCounts).sort(([, a], [, b]) => b - a);
+  const primaryMood = (sorted[0]?.[0] || 'peaceful') as MoodCategory;
+  const secondaryMoods = sorted.slice(1, 3).map(([mood]) => mood as MoodCategory);
+
+  // Pick quotes: 2 from primary, 1 from secondary, 1 more from primary
+  const primaryQuotes = MOOD_QUOTES[primaryMood] || MOOD_QUOTES.peaceful;
+  const secondaryQuotes = secondaryMoods.length > 0
+    ? (MOOD_QUOTES[secondaryMoods[0]] || MOOD_QUOTES.peaceful)
+    : MOOD_QUOTES.peaceful;
+
+  const quotes: MoodQuote[] = [];
+  const usedSources = new Set<string>();
+  // Add 3 from primary
+  for (const q of primaryQuotes) {
+    if (quotes.length < 3 && !usedSources.has(q.source)) {
+      quotes.push(q);
+      usedSources.add(q.source);
+    }
+  }
+  // Add 1 from secondary
+  for (const q of secondaryQuotes) {
+    if (quotes.length < 4 && !usedSources.has(q.source)) {
+      quotes.push(q);
+      usedSources.add(q.source);
+    }
+  }
+
+  const moodInfo = MOOD_MESSAGES[primaryMood];
+  const dua = MOOD_DUAS[primaryMood];
+
+  return {
+    primaryMood,
+    secondaryMoods,
+    quotes,
+    duaAr: dua.arabic,
+    duaEn: dua.english,
+    message: moodInfo.message,
+    title: moodInfo.title,
+  };
+}
+
+
+// ─── Mood Quiz Component ──────────────────────────────────
+
+
+function MoodQuiz({
+  showToast,
+  arabicFontSize,
+}: {
+  showToast: (msg: string) => void;
+  arabicFontSize: string;
+}) {
+  const [phase, setPhase] = useState<'idle' | 'quiz' | 'results'>('idle');
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [result, setResult] = useState<MoodProfile | null>(null);
+
+  const handleStart = () => {
+    setAnswers([]);
+    setCurrentQuestion(0);
+    setPhase('quiz');
+  };
+
+  const handleAnswer = (optionIndex: number) => {
+    const newAnswers = [...answers, optionIndex];
+    setAnswers(newAnswers);
+    if (currentQuestion < MOOD_QUESTIONS.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      // Calculate results
+      const profile = calculateMoodProfile(newAnswers);
+      setResult(profile);
+      setPhase('results');
+    }
+  };
+
+  const handleBack = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+      setAnswers(answers.slice(0, -1));
+    } else {
+      setPhase('idle');
+    }
+  };
+
+  const handleReset = () => {
+    setPhase('idle');
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setResult(null);
+  };
+
+  const handleCopyDua = async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(`${result.duaAr}\n\n${result.duaEn}`);
+      showToast('Dua copied to clipboard!');
+    } catch {
+      showToast('Could not copy');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Idle State */}
+      {phase === 'idle' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="overflow-hidden relative cursor-pointer group hover:shadow-lg transition-shadow duration-300"
+            onClick={handleStart}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-[#0D4B3C]/5 via-[#C8A951]/5 to-[#0D4B3C]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Heart className="w-7 h-7 text-white dark:text-[#0F1A14]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-[#0D4B3C] dark:text-[#C8A951] mb-1">
+                    How Are You Feeling?
+                  </h3>
+                  <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
+                    Answer a few questions and we&apos;ll share Quran verses and Hadiths that speak to your heart right now.
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-[#C8A951] group-hover:translate-x-1 transition-transform" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Quiz State */}
+      {phase === 'quiz' && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+        >
+          <Card className="overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+
+            <CardContent className="p-6">
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={handleBack}
+                    className="flex items-center gap-1 text-sm text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0D4B3C] dark:hover:text-[#C8A951] transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    {currentQuestion === 0 ? 'Exit' : 'Back'}
+                  </button>
+                  <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-medium">
+                    {currentQuestion + 1} of {MOOD_QUESTIONS.length}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((currentQuestion + 1) / MOOD_QUESTIONS.length) * 100}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </div>
+
+              {/* Question */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentQuestion}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <p className="text-lg font-semibold text-[#1A1A2E] dark:text-[#E8E0D0] mb-5 leading-relaxed">
+                    {MOOD_QUESTIONS[currentQuestion].question}
+                  </p>
+
+                  <div className="space-y-3">
+                    {MOOD_QUESTIONS[currentQuestion].options.map((option, idx) => (
+                      <motion.button
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.08, duration: 0.2 }}
+                        onClick={() => handleAnswer(idx)}
+                        className="w-full text-left p-4 rounded-xl border-2 border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951]/50 dark:hover:border-[#C8A951]/50 hover:bg-[#0D4B3C]/5 dark:hover:bg-[#C8A951]/5 transition-all duration-200 group/opt"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full border-2 border-[#C8A951]/40 group-hover/opt:border-[#C8A951] group-hover/opt:bg-[#C8A951]/10 flex items-center justify-center flex-shrink-0 transition-all">
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#C8A951] opacity-0 group-hover/opt:opacity-50 transition-opacity" />
+                          </div>
+                          <span className="text-sm text-[#4A5568] dark:text-[#9CA3AF] group-hover/opt:text-[#0D4B3C] dark:group-hover/opt:text-[#E8E0D0] transition-colors leading-relaxed">
+                            {option.label}
+                          </span>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Results State */}
+      {phase === 'results' && result && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-4"
+        >
+          {/* Result Header */}
+          <Card className="overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+            <CardContent className="p-6 sm:p-8 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] flex items-center justify-center shadow-lg"
+              >
+                <Heart className="w-8 h-8 text-white dark:text-[#0F1A14]" />
+              </motion.div>
+
+              <Badge className="mb-3 bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#C8A951]/10 dark:text-[#C8A951] text-xs px-3 py-1">
+                {MOOD_LABELS[result.primaryMood].label}
+              </Badge>
+
+              <h3 className="text-xl font-bold text-[#0D4B3C] dark:text-[#C8A951] mb-2">
+                {result.title}
+              </h3>
+              <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] max-w-md mx-auto leading-relaxed">
+                {result.message}
+              </p>
+
+              <div className="flex items-center justify-center gap-2 mt-5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Take Again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Personalized Dua */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#C8A951]" />
+                  <CardTitle className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">
+                    A Dua for You
+                  </CardTitle>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleCopyDua}>
+                      <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left"><p>Copy dua</p></TooltipContent>
+                </Tooltip>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.4] ${getArabicFontSize(arabicFontSize)}`}>
+                {result.duaAr}
+              </div>
+              <Separator className="my-3" />
+              <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed italic">
+                &ldquo;{result.duaEn}&rdquo;
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Recommended Quotes */}
+          <div>
+            <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951] mb-3 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Verses & Hadiths for You
+            </h3>
+            <div className="space-y-3">
+              {result.quotes.map((quote, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + idx * 0.1 }}
+                >
+                  <Card className="islamic-border-top overflow-hidden">
+                    <CardContent className="p-5">
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] px-2 py-0.5 mb-3 ${
+                          quote.type === 'quran'
+                            ? 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951]'
+                            : 'bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#0D4B3C]/10 dark:text-[#1B6B52]'
+                        }`}
+                      >
+                        {quote.type === 'quran' ? 'Quran' : 'Hadith'}
+                      </Badge>
+
+                      <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.2] text-base ${arabicFontSize === 'lg' ? 'text-xl' : ''}`}>
+                        {quote.textAr}
+                      </div>
+                      <Separator className="my-3" />
+                      <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                        {islamifyNames(quote.textEn)}
+                      </p>
+                      <p className="text-xs text-[#C8A951] mt-3 font-medium">
+                        — {quote.source}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 // ─── Daily Motivation ─────────────────────────────────────
+
 
 function DailyMotivation({
   addBookmark,
@@ -1368,6 +2267,9 @@ function DailyMotivation({
         </CardContent>
       </Card>
 
+      {/* Mood-Based Spiritual Guidance */}
+      <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} />
+
       {/* Hadith Card */}
       <Card className="overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-[#C8A951]/50 via-[#C8A951] to-[#C8A951]/50" />
@@ -1421,6 +2323,8 @@ function DailyMotivation({
     </div>
   );
 }
+
+
 
 // ─── Bookmarks View ───────────────────────────────────────
 

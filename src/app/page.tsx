@@ -335,14 +335,15 @@ export default function Home() {
     } catch { /* ignore */ }
     return 'md';
   });
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('noor-theme') === 'dark';
-  });
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Sync dark class on mount
+  // Read persisted theme on mount (avoids hydration mismatch)
   useEffect(() => {
-    if (isDark) {
+    setMounted(true);
+    const saved = localStorage.getItem('noor-theme');
+    if (saved === 'dark') {
+      setIsDark(true);
       document.documentElement.classList.add('dark');
     }
   }, []);

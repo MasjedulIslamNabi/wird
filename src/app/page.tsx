@@ -202,6 +202,63 @@ const BUNDLED_HADITHS: Hadith[] = [
 const SURAH_LIST_URL = 'https://api.alquran.cloud/v1/surah';
 const TOTAL_VERSES = 6236;
 
+// ─── Islamic Name Correction ─────────────────────────────
+// Replaces Biblical/Christian names with proper Islamic names in translations
+
+const ISLAMIC_NAMES: [RegExp, string][] = [
+  // Prophets (peace be upon them all)
+  [/\bAbraham\b/g, 'Ibrahim (AS)'],
+  [/\bMoses\b/g, 'Musa (AS)'],
+  [/\bJesus\b/g, 'Isa (AS)'],
+  [/\bJoseph\b/g, 'Yusuf (AS)'],
+  [/\bDavid\b/g, 'Dawud (AS)'],
+  [/\bSolomon\b/g, 'Sulayman (AS)'],
+  [/\bNoah\b/g, 'Nuh (AS)'],
+  [/\bJacob\b/g, 'Yaqub (AS)'],
+  [/\bIsaac\b/g, 'Ishaq (AS)'],
+  [/\bIshmael\b/g, 'Ismail (AS)'],
+  [/\bElijah\b/g, 'Ilyas (AS)'],
+  [/\bElisha\b/g, 'Al-Yasa (AS)'],
+  [/\bEzekiel\b/g, 'Dhul-Kifl (AS)'],
+  [/\bAaron\b/g, 'Harun (AS)'],
+  [/\bZachariah\b/g, 'Zakariya (AS)'],
+  [/\bJohn\b(?!\s*the\s*Baptist)/g, 'Yahya (AS)'],
+  [/\bJohn the Baptist\b/g, 'Yahya (AS)'],
+  [/\bJonah\b/g, 'Yunus (AS)'],
+  [/\bJob\b/g, 'Ayyub (AS)'],
+  [/\bLot\b/g, 'Lut (AS)'],
+  [/\bEnoch\b/g, 'Idris (AS)'],
+  [/\bShuaib\b/g, 'Shuayb (AS)'],
+  [/\bHud\b/g, 'Hud (AS)'],
+  [/\bSalih\b/g, 'Salih (AS)'],
+  [/\bMuhammad\b/g, 'Muhammad (PBUH)'],
+  [/\bAdam\b/g, 'Adam (AS)'],
+  // Angels
+  [/\bGabriel\b/g, 'Jibril (AS)'],
+  [/\bMichael\b/g, 'Mikail (AS)'],
+  [/\bIsrafil\b/g, 'Israfil (AS)'],
+  [/\bAzrael\b/g, 'Azrael (AS)'],
+  // Wives / Family of Prophets
+  [/\bMary\b/g, 'Maryam (AS)'],
+  [/\bSarah\b/g, 'Sara (AS)'],
+  [/\bHagar\b/g, 'Hajar (AS)'],
+  [/\bEve\b/g, 'Hawwa (AS)'],
+  [/\bAsiyah\b/g, 'Asiyah (AS)'],
+  // Key Islamic terms sometimes translated
+  [/\bGod\b/g, 'Allah'],
+  // Remove duplicate "(AS)" if the name already has it
+  [/\(AS\)\s*\(AS\)/g, '(AS)'],
+];
+
+function islamifyNames(text: string): string {
+  if (!text) return text;
+  let result = text;
+  for (const [pattern, replacement] of ISLAMIC_NAMES) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 function getDayOfYearAyah(): number {
@@ -670,7 +727,7 @@ function SurahList({ onSelectSurah }: { onSelectSurah: (n: number) => void }) {
                   {surah.englishName}
                 </p>
                 <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] truncate">
-                  {surah.englishNameTranslation}
+                  {islamifyNames(surah.englishNameTranslation)}
                 </p>
               </div>
 
@@ -829,11 +886,11 @@ function SurahReader({
     } else {
       addBookmark({
         surahNumber,
-        surahName: surahInfo?.englishName || '',
+        surahName: islamifyNames(surahInfo?.englishName || ''),
         surahNameAr: surahInfo?.name || '',
         ayahNumber: ayah.numberInSurah,
         ayahText: ayah.text,
-        translation: translation.text,
+        translation: islamifyNames(translation.text),
         dateAdded: new Date().toISOString(),
       });
       showToast('Saved to bookmarks ✨');
@@ -884,7 +941,7 @@ function SurahReader({
               {surahInfo?.englishName || `Surah ${surahNumber}`}
             </h2>
             <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
-              {surahInfo?.englishNameTranslation} • {surahInfo?.numberOfAyahs || arabicVerses.length} Verses • {surahInfo?.revelationType}
+              {islamifyNames(surahInfo?.englishNameTranslation)} • {surahInfo?.numberOfAyahs || arabicVerses.length} Verses • {surahInfo?.revelationType}
             </p>
           </div>
           <div className="font-arabic text-3xl text-[#0D4B3C] dark:text-[#C8A951]">{surahInfo?.name}</div>
@@ -965,7 +1022,7 @@ function SurahReader({
                   {/* Translation */}
                   <Separator className="mb-3" />
                   <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
-                    {englishVerses[idx]?.text}
+                    {islamifyNames(englishVerses[idx]?.text)}
                   </p>
                 </CardContent>
               </Card>
@@ -1043,7 +1100,7 @@ function SurahReader({
                               {word.arabic}
                             </span>
                             <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] text-center leading-tight max-w-[5rem]">
-                              {word.translation}
+                              {islamifyNames(word.translation)}
                             </span>
                           </motion.div>
                         ))}
@@ -1054,7 +1111,7 @@ function SurahReader({
                         <>
                           <Separator className="my-3" />
                           <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
-                            {engVerse.text}
+                            {islamifyNames(engVerse.text)}
                           </p>
                         </>
                       )}
@@ -1117,7 +1174,7 @@ function DailyMotivation({
         setDailyVerse({
           arabic: arabic.text,
           english: english.text,
-          surahName: english.surah.englishName,
+          surahName: islamifyNames(english.surah.englishName),
           surahNameAr: english.surah.name,
           ayahNumber: english.numberInSurah,
           surahNumber: english.surah.number,
@@ -1125,7 +1182,7 @@ function DailyMotivation({
         // Cache in localStorage
         try {
           localStorage.setItem('noor-daily-verse', JSON.stringify({
-            data: { arabic: arabic.text, english: english.text, surahName: english.surah.englishName, surahNameAr: english.surah.name, ayahNumber: english.numberInSurah, surahNumber: english.surah.number },
+            data: { arabic: arabic.text, english: islamifyNames(english.text), surahName: islamifyNames(english.surah.englishName), surahNameAr: english.surah.name, ayahNumber: english.numberInSurah, surahNumber: english.surah.number },
             date: new Date().toDateString(),
           }));
         } catch { /* ignore */ }
@@ -1236,7 +1293,7 @@ function DailyMotivation({
 
               {/* Translation */}
               <p className="text-[#4A5568] dark:text-[#9CA3AF] text-center leading-relaxed mb-4 max-w-xl mx-auto">
-                {dailyVerse.english}
+                {islamifyNames(dailyVerse.english)}
               </p>
 
               {/* Reference */}
@@ -1475,7 +1532,7 @@ function BookmarksView({
 
                   {/* Translation */}
                   <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed line-clamp-3">
-                    {bookmark.translation}
+                    {islamifyNames(bookmark.translation)}
                   </p>
 
                   {/* Date */}

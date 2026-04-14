@@ -985,7 +985,7 @@ function SurahReader({
               {surahInfo?.englishName || `Surah ${surahNumber}`}
             </h2>
             <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
-              {islamifyNames(surahInfo?.englishNameTranslation)} • {surahInfo?.numberOfAyahs || arabicVerses.length} Verses • {surahInfo?.revelationType}
+              {islamifyNames(surahInfo?.englishNameTranslation ?? '')} • {surahInfo?.numberOfAyahs || arabicVerses.length} Verses • {surahInfo?.revelationType ?? ''}
             </p>
           </div>
           <div className="font-arabic text-3xl text-[#0D4B3C] dark:text-[#C8A951]">{surahInfo?.name}</div>

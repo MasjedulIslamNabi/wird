@@ -887,7 +887,6 @@ function SurahReader({
     const audio = new Audio(
       `https://cdn.islamic.network/quran/audio/128/${selectedReciter}/${ayahAbsoluteNumber}.mp3`
     );
-    audio.volume = volumeRef.current;
     audioRef.current = audio;
     setPlayingAyah(ayahAbsoluteNumber);
 

@@ -887,6 +887,7 @@ function SurahReader({
     const audio = new Audio(
       `https://cdn.islamic.network/quran/audio/128/${selectedReciter}/${ayahAbsoluteNumber}.mp3`
     );
+    audio.volume = volumeRef.current;
     audioRef.current = audio;
     setPlayingAyah(ayahAbsoluteNumber);
 
@@ -1165,6 +1166,9 @@ function ContinuousPlayer({
   const [playlist, setPlaylist] = useState<number[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [volume, setVolume] = useState(1.0);
+  const volumeRef = useRef(1.0);
+  volumeRef.current = volume;
 
   // Caption state
   const [captionLanguage, setCaptionLanguage] = useState<'arabic' | 'english' | 'bangla'>('arabic');
@@ -1307,6 +1311,7 @@ function ContinuousPlayer({
     const audio = new Audio(
       `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${ayahAbs}.mp3`
     );
+    audio.volume = volumeRef.current;
     globalAudioRef.current = audio;
 
     audio.play().catch(() => {
@@ -1371,6 +1376,7 @@ function ContinuousPlayer({
         const nextAudio = new Audio(
           `https://cdn.islamic.network/quran/audio/128/${reciterToUse}/${nextAyah}.mp3`
         );
+        nextAudio.volume = volumeRef.current;
         globalAudioRef.current = nextAudio;
         nextAudio.play().catch(() => {});
         nextAudio.ontimeupdate = () => {
@@ -1720,6 +1726,40 @@ function ContinuousPlayer({
                   Stop
                 </Button>
               </div>
+
+              {/* Volume Slider */}
+              <div className="flex items-center gap-3 mt-4 px-2">
+                <button
+                  onClick={() => {
+                    const newVol = volume === 0 ? 1 : 0;
+                    setVolume(newVol);
+                    if (globalAudioRef.current) globalAudioRef.current.volume = newVol;
+                  }}
+                  className="text-[#C8A951] flex-shrink-0"
+                >
+                  {volume === 0 ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={volume}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setVolume(v);
+                    if (globalAudioRef.current) globalAudioRef.current.volume = v;
+                  }}
+                  className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer accent-[#C8A951] bg-[#E5E1D8] dark:bg-[#2D3E34]"
+                />
+                <span className="text-[10px] text-[#9CA3AF] w-7 text-right flex-shrink-0">
+                  {Math.round(volume * 100)}%
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -1911,6 +1951,7 @@ function MiniPlayer({
       const nextAudio = new Audio(
         `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${nextAbsolute}.mp3`
       );
+      nextAudio.volume = 1.0;
       (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = nextAudio;
       nextAudio.play().catch(() => {});
 
@@ -1958,6 +1999,7 @@ function MiniPlayer({
       const prevAudio = new Audio(
         `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${prevAbsolute}.mp3`
       );
+      prevAudio.volume = 1.0;
       (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = prevAudio;
       prevAudio.play().catch(() => {});
 

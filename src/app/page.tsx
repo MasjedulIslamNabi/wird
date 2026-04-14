@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Moon,
@@ -19,6 +19,10 @@ import {
   Sparkles,
   Copy,
   Check,
+  Volume2,
+  Play,
+  Pause,
+  ChevronDown,
   Type,
   Globe,
   Info,
@@ -72,20 +76,7 @@ interface AyahTranslation {
   surah: { number: number; name: string; englishName: string; englishNameTranslation: string; numberOfAyahs: number; revelationType: string };
 }
 
-interface WordByWordEntry {
-  number: number;
-  text: string;
-  translation: string;
-  transliteration: { text: string };
-  verse_key: string;
-  page_number: number;
-  juz_number: number;
-  hizb_number: number;
-  rub_el_hizb_number: number;
-  ruku_number: number;
-  manzil_number: number;
-  sajdah_number: number;
-}
+
 
 interface BookmarkItem {
   surahNumber: number;
@@ -202,6 +193,15 @@ const BUNDLED_HADITHS: Hadith[] = [
 const SURAH_LIST_URL = 'https://api.alquran.cloud/v1/surah';
 const TOTAL_VERSES = 6236;
 
+const RECITERS = [
+  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', shortName: 'Alafasy' },
+  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', shortName: 'Abdul Basit' },
+  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', shortName: 'Husary' },
+  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', shortName: 'Minshawi' },
+  { id: 'ar.abdurrahmaansudais', name: 'Abdurrahmaan As-Sudais', shortName: 'Sudais' },
+  { id: 'ar.mahermuaiqly', name: 'Maher Al Muaiqly', shortName: 'Muaiqly' },
+];
+
 // ─── Islamic Name Correction ─────────────────────────────
 // Replaces Biblical/Christian names with proper Islamic names in translations
 
@@ -283,14 +283,7 @@ function getArabicFontSize(size: string): string {
   }
 }
 
-function getArabicWordFontSize(size: string): string {
-  switch (size) {
-    case 'sm': return 'text-lg';
-    case 'md': return 'text-xl';
-    case 'lg': return 'text-2xl';
-    default: return 'text-xl';
-  }
-}
+
 
 // ─── Toast Utility ────────────────────────────────────────
 
@@ -321,7 +314,6 @@ function useToast() {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'quran' | 'daily' | 'bookmarks' | 'settings'>('quran');
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'full' | 'wordbyword'>('full');
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -395,7 +387,6 @@ export default function Home() {
 
   const navigateToSurah = useCallback((surahNumber: number) => {
     setSelectedSurah(surahNumber);
-    setViewMode('full');
     setActiveTab('quran');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
@@ -421,8 +412,6 @@ export default function Home() {
               selectedSurah !== null ? (
                 <SurahReader
                   surahNumber={selectedSurah}
-                  viewMode={viewMode}
-                  setViewMode={setViewMode}
                   onBack={() => setSelectedSurah(null)}
                   arabicFontSize={arabicFontSize}
                   addBookmark={addBookmark}
@@ -431,7 +420,7 @@ export default function Home() {
                   showToast={showToast}
                 />
               ) : (
-                <SurahList onSelectSurah={(n) => { setSelectedSurah(n); setViewMode('full'); }} />
+                <SurahList onSelectSurah={(n) => { setSelectedSurah(n); }} />
               )
             )}
             {activeTab === 'daily' && (
@@ -768,8 +757,6 @@ function SurahList({ onSelectSurah }: { onSelectSurah: (n: number) => void }) {
 
 function SurahReader({
   surahNumber,
-  viewMode,
-  setViewMode,
   onBack,
   arabicFontSize,
   addBookmark,
@@ -778,8 +765,6 @@ function SurahReader({
   showToast,
 }: {
   surahNumber: number;
-  viewMode: 'full' | 'wordbyword';
-  setViewMode: (v: 'full' | 'wordbyword') => void;
   onBack: () => void;
   arabicFontSize: string;
   addBookmark: (b: BookmarkItem) => void;
@@ -789,11 +774,13 @@ function SurahReader({
 }) {
   const [arabicVerses, setArabicVerses] = useState<AyahFull[]>([]);
   const [englishVerses, setEnglishVerses] = useState<AyahTranslation[]>([]);
-  const [wordByWordData, setWordByWordData] = useState<WordByWordEntry[]>([]);
+  const [banglaVerses, setBanglaVerses] = useState<AyahTranslation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingWbw, setLoadingWbw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [surahInfo, setSurahInfo] = useState<SurahInfo | null>(null);
+  const [selectedReciter, setSelectedReciter] = useState(RECITERS[0].id);
+  const [playingAyah, setPlayingAyah] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch surah info from the list
   useEffect(() => {
@@ -813,19 +800,20 @@ function SurahReader({
     return () => { cancelled = true; };
   }, [surahNumber]);
 
-  // Fetch verses
+  // Fetch verses (Arabic, English, Bangla)
   useEffect(() => {
     let cancelled = false;
     async function fetchVerses() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.sahih`);
+        const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.sahih,bn.bengali`);
         if (!res.ok) throw new Error('Failed to fetch verses');
         const data = await res.json();
         if (!cancelled && data.code === 200 && Array.isArray(data.data)) {
           setArabicVerses(data.data[0].ayahs);
           setEnglishVerses(data.data[1].ayahs);
+          setBanglaVerses(data.data[2].ayahs);
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Unknown error');
@@ -837,46 +825,48 @@ function SurahReader({
     return () => { cancelled = true; };
   }, [surahNumber]);
 
-  // Fetch word-by-word when mode changes
-  useEffect(() => {
-    if (viewMode !== 'wordbyword') return;
-    if (wordByWordData.length > 0) return;
-    let cancelled = false;
-    async function fetchWBW() {
-      try {
-        setLoadingWbw(true);
-        const res = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.sahih,word_by_word`);
-        if (!res.ok) throw new Error('Failed');
-        const data = await res.json();
-        if (!cancelled && data.code === 200 && Array.isArray(data.data)) {
-          const wbwEdition = data.data.find((d: { edition: { identifier: string } }) => d.edition.identifier === 'word_by_word');
-          if (wbwEdition && Array.isArray(wbwEdition.ayahs)) {
-            const entries: WordByWordEntry[] = [];
-            wbwEdition.ayahs.forEach((ayah: WordByWordEntry) => {
-              entries.push(ayah);
-            });
-            setWordByWordData(entries);
-          }
-        }
-      } catch { /* ignore */ } finally {
-        if (!cancelled) setLoadingWbw(false);
+  // Play/pause ayah audio
+  const playAyah = useCallback((ayahAbsoluteNumber: number) => {
+    if (playingAyah === ayahAbsoluteNumber) {
+      // Toggle: pause and stop
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
+      setPlayingAyah(null);
+      return;
     }
-    fetchWBW();
-    return () => { cancelled = true; };
-  }, [viewMode, surahNumber, wordByWordData.length]);
 
-  // Group word-by-word by verse_key
-  const groupedWords = useMemo(() => {
-    const groups: Record<string, { arabic: string; translation: string }[]> = {};
-    if (wordByWordData.length === 0) return groups;
-    wordByWordData.forEach((entry) => {
-      const key = entry.verse_key;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push({ arabic: entry.text, translation: entry.translation || entry.transliteration?.text || '' });
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audio = new Audio(
+      `https://cdn.islamic.network/quran/audio/128/${selectedReciter}/${ayahAbsoluteNumber}.mp3`
+    );
+    audioRef.current = audio;
+    setPlayingAyah(ayahAbsoluteNumber);
+
+    audio.play().catch(() => {
+      setPlayingAyah(null);
     });
-    return groups;
-  }, [wordByWordData]);
+
+    audio.onended = () => {
+      setPlayingAyah(null);
+      audioRef.current = null;
+    };
+  }, [playingAyah, selectedReciter]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   const handleBookmark = (ayah: AyahFull, translation: AyahTranslation) => {
     const key = `${surahNumber}:${ayah.numberInSurah}`;
@@ -957,176 +947,100 @@ function SurahReader({
         </div>
       )}
 
-      {/* View Mode Toggle */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <Button
-          size="sm"
-          variant={viewMode === 'full' ? 'default' : 'outline'}
-          onClick={() => setViewMode('full')}
-          className={viewMode === 'full' ? 'bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white dark:bg-[#C8A951] dark:text-[#0F1A14] dark:hover:bg-[#C8A951]/90' : ''}
+      {/* Reciter Selector */}
+      <div className="flex items-center justify-center gap-2 mb-5">
+        <Volume2 className="w-4 h-4 text-[#C8A951]" />
+        <select
+          value={selectedReciter}
+          onChange={(e) => {
+            setSelectedReciter(e.target.value);
+            if (audioRef.current) { audioRef.current.pause(); setPlayingAyah(null); }
+          }}
+          className="text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-1.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
         >
-          <BookOpen className="w-3.5 h-3.5 mr-1" />
-          Full Text
-        </Button>
-        <Button
-          size="sm"
-          variant={viewMode === 'wordbyword' ? 'default' : 'outline'}
-          onClick={() => setViewMode('wordbyword')}
-          className={viewMode === 'wordbyword' ? 'bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white dark:bg-[#C8A951] dark:text-[#0F1A14] dark:hover:bg-[#C8A951]/90' : ''}
-        >
-          <Type className="w-3.5 h-3.5 mr-1" />
-          Word-by-Word
-        </Button>
+          {RECITERS.map(r => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Full Text View */}
-      {viewMode === 'full' && (
-        <div className="space-y-4">
-          {arabicVerses.map((ayah, idx) => (
-            <motion.div
-              key={ayah.number}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.02, duration: 0.2 }}
-            >
-              <Card className="islamic-border-top overflow-hidden">
-                <CardContent className="p-5 sm:p-6">
-                  {/* Ayah Number Row */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="verse-badge">{formatAyahNumber(ayah.numberInSurah)}</div>
-                      <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Verse {ayah.numberInSurah}</span>
-                    </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8"
-                          onClick={() => handleBookmark(ayah, englishVerses[idx])}
-                        >
-                          <Heart className={`w-4 h-4 ${isBookmarked(surahNumber, ayah.numberInSurah) ? 'fill-[#C8A951] text-[#C8A951]' : 'text-[#6B7280]'}`} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        <p>{isBookmarked(surahNumber, ayah.numberInSurah) ? 'Remove bookmark' : 'Bookmark this verse'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-
-                  {/* Arabic Text */}
-                  <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] mb-4 leading-[2.4] text-right ${getArabicFontSize(arabicFontSize)}`}>
-                    {ayah.text}
-                  </div>
-
-                  {/* Translation */}
-                  <Separator className="mb-3" />
-                  <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
-                    {islamifyNames(englishVerses[idx]?.text)}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {/* Word-by-Word View */}
-      {viewMode === 'wordbyword' && (
-        <div className="space-y-6">
-          {loadingWbw ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-[#6B7280]">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Loading word-by-word data...</span>
-            </div>
-          ) : Object.keys(groupedWords).length > 0 ? (
-            Object.entries(groupedWords).map(([verseKey, words], idx) => {
-              const ayahNum = parseInt(verseKey.split(':')[1]);
-              const engVerse = englishVerses.find(v => v.numberInSurah === ayahNum);
-              const arabVerse = arabicVerses.find(v => v.numberInSurah === ayahNum);
-
-              return (
-                <motion.div
-                  key={verseKey}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03, duration: 0.2 }}
-                >
-                  <Card className="islamic-border-top overflow-hidden">
-                    <CardContent className="p-5 sm:p-6">
-                      {/* Ayah Number */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="verse-badge">{formatAyahNumber(ayahNum)}</div>
-                        <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Verse {ayahNum}</span>
-                        {arabVerse && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="w-8 h-8 ml-auto"
-                                onClick={() => handleBookmark(arabVerse, engVerse || englishVerses[idx])}
-                              >
-                                <Heart className={`w-4 h-4 ${isBookmarked(surahNumber, ayahNum) ? 'fill-[#C8A951] text-[#C8A951]' : 'text-[#6B7280]'}`} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              <p>{isBookmarked(surahNumber, ayahNum) ? 'Remove bookmark' : 'Bookmark'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-
-                      {/* Full Arabic for reference */}
-                      {arabVerse && (
-                        <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] mb-4 text-right leading-[2.4] ${getArabicFontSize(arabicFontSize)}`}>
-                          {arabVerse.text}
-                        </div>
+      <div className="space-y-4">
+        {arabicVerses.map((ayah, idx) => (
+          <motion.div
+            key={ayah.number}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.02, duration: 0.2 }}
+          >
+            <Card className="islamic-border-top overflow-hidden">
+              <CardContent className="p-5 sm:p-6">
+                {/* Ayah Number Row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="verse-badge">{formatAyahNumber(ayah.numberInSurah)}</div>
+                    <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Verse {ayah.numberInSurah}</span>
+                    {/* Play/Pause button */}
+                    <button
+                      onClick={() => playAyah(ayah.number)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 ${
+                        playingAyah === ayah.number
+                          ? 'bg-[#C8A951]/20 text-[#C8A951] animate-pulse'
+                          : 'text-[#9CA3AF] hover:text-[#C8A951] hover:bg-[#C8A951]/10'
+                      }`}
+                      aria-label={playingAyah === ayah.number ? 'Pause recitation' : 'Play recitation'}
+                    >
+                      {playingAyah === ayah.number ? (
+                        <Pause className="w-3.5 h-3.5" />
+                      ) : (
+                        <Volume2 className="w-3.5 h-3.5" />
                       )}
+                    </button>
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-8 h-8"
+                        onClick={() => handleBookmark(ayah, englishVerses[idx])}
+                      >
+                        <Heart className={`w-4 h-4 ${isBookmarked(surahNumber, ayah.numberInSurah) ? 'fill-[#C8A951] text-[#C8A951]' : 'text-[#6B7280]'}`} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      <p>{isBookmarked(surahNumber, ayah.numberInSurah) ? 'Remove bookmark' : 'Bookmark this verse'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
-                      <Separator className="my-3" />
+                {/* Arabic Text */}
+                <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] mb-4 leading-[2.4] text-right ${getArabicFontSize(arabicFontSize)}`}>
+                  {ayah.text}
+                </div>
 
-                      {/* Word Chips */}
-                      <div dir="rtl" lang="ar" className="flex flex-wrap gap-2 justify-end mt-4">
-                        {words.map((word, wIdx) => (
-                          <motion.div
-                            key={`${verseKey}-${wIdx}`}
-                            className="word-chip"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: wIdx * 0.01, duration: 0.15 }}
-                          >
-                            <span className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] whitespace-nowrap ${getArabicWordFontSize(arabicFontSize)}`}>
-                              {word.arabic}
-                            </span>
-                            <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] text-center leading-tight max-w-[5rem]">
-                              {islamifyNames(word.translation)}
-                            </span>
-                          </motion.div>
-                        ))}
-                      </div>
+                {/* English Translation */}
+                <Separator className="mb-3" />
+                <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                  {islamifyNames(englishVerses[idx]?.text)}
+                </p>
 
-                      {/* Full Translation */}
-                      {engVerse && (
-                        <>
-                          <Separator className="my-3" />
-                          <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
-                            {islamifyNames(engVerse.text)}
-                          </p>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })
-          ) : (
-            <div className="text-center py-12 text-[#6B7280]">
-              <p>No word-by-word data available for this surah.</p>
-            </div>
-          )}
-        </div>
-      )}
+                {/* Bangla Translation */}
+                {banglaVerses[idx]?.text && (
+                  <div className="mt-2">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-[#0D4B3C]/5 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951] mb-1.5">
+                      বাংলা
+                    </Badge>
+                    <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                      {banglaVerses[idx].text}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }

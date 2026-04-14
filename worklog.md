@@ -1,4 +1,28 @@
 ---
+Task ID: 4
+Agent: Main Agent
+Task: Add audio recitation, Bangla translation, remove word-by-word mode
+
+Work Log:
+- Removed word-by-word (text-to-text) mode entirely: WordByWordEntry interface, viewMode state, WBW fetch logic, groupedWords, WBW rendering
+- Added RECITERS constant with 6 famous Qaris: Alafasy, Abdul Basit, Husary, Minshawi, Sudais, Muaiqly
+- Added per-ayah audio playback using HTML5 Audio API via useRef
+- Audio CDN: `https://cdn.islamic.network/quran/audio/128/{reciterId}/{ayahNumber}.mp3`
+- Added reciter selector dropdown between Bismillah and verses with Volume2 icon
+- Added play/pause toggle button next to each ayah badge (gold pulse when active)
+- Added Bangla translation via `bn.bengali` edition from AlQuran.cloud API
+- Bangla text appears below English with a "বাংলা" badge
+- Fetch URL now: `editions/quran-uthmani,en.sahih,bn.bengali`
+- Build verified: `npx next build` compiles successfully
+
+Stage Summary:
+- Word-by-word mode completely removed
+- 6 famous Qari reciters available: Alafasy, Abdul Basit, Husary, Minshawi, Sudais, Muaiqly
+- Per-ayah audio with play/pause toggle and animated indicator
+- Bangla translation by Muhiuddin Khan added alongside English
+
+
+---
 Task ID: 1
 Agent: Main Agent
 Task: Generate comprehensive Islamic Faith-Tech App Technical Guide (DOCX)

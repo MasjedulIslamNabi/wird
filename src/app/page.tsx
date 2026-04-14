@@ -1195,6 +1195,16 @@ function ContinuousPlayer({
   const playlistRef = useRef<number[]>([]);
   const trackIndexRef = useRef(0);
   const [surahSearch, setSurahSearch] = useState('');
+  const autoPlaySurahRef = useRef<number | null>(null);
+  autoPlaySurahRef.current = autoPlaySurah;
+  const startPlayingRef = useRef<((trackIndex?: number) => void) | null>(null);
+
+  // Sync isPlaying from globalPlayer on mount (handles tab-switch remount)
+  useEffect(() => {
+    if (globalPlayer?.isPlaying) {
+      setIsPlaying(true);
+    }
+  }, []);
 
   // Fetch surah list
   useEffect(() => {
@@ -1316,8 +1326,11 @@ function ContinuousPlayer({
       totalInSurah: totalAyahs,
     });
 
-    // Play audio
+    // Play audio — clean up old audio handlers first
     if (globalAudioRef.current) {
+      globalAudioRef.current.onended = null;
+      globalAudioRef.current.ontimeupdate = null;
+      globalAudioRef.current.onerror = null;
       globalAudioRef.current.pause();
       globalAudioRef.current = null;
     }
@@ -1331,7 +1344,7 @@ function ContinuousPlayer({
     audio.play().catch(() => {
       showToast('Audio playback failed. Trying next verse...');
       if (trackIndexRef.current < playlistRef.current.length - 1) {
-        setTimeout(() => startPlaying(trackIndexRef.current + 1), 300);
+        setTimeout(() => startPlayingRef.current?.(trackIndexRef.current + 1), 300);
       } else {
         setIsPlaying(false);
         setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
@@ -1341,7 +1354,7 @@ function ContinuousPlayer({
     audio.onerror = () => {
       showToast('Audio failed to load. Skipping...');
       if (trackIndexRef.current < playlistRef.current.length - 1) {
-        setTimeout(() => startPlaying(trackIndexRef.current + 1), 300);
+        setTimeout(() => startPlayingRef.current?.(trackIndexRef.current + 1), 300);
       } else {
         setIsPlaying(false);
         setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
@@ -1403,7 +1416,7 @@ function ContinuousPlayer({
           if (trackIndexRef.current < playlistRef.current.length - 1) {
             trackIndexRef.current++;
             nextAudio.onended = null;
-            startPlaying(trackIndexRef.current);
+            startPlayingRef.current?.(trackIndexRef.current);
           } else {
             setIsPlaying(false);
             setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
@@ -1415,7 +1428,7 @@ function ContinuousPlayer({
           if (trackIndexRef.current < playlistRef.current.length - 1) {
             trackIndexRef.current++;
             nextAudio.onended = null;
-            startPlaying(trackIndexRef.current);
+            startPlayingRef.current?.(trackIndexRef.current);
           } else {
             setIsPlaying(false);
             setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
@@ -1429,24 +1442,34 @@ function ContinuousPlayer({
     };
   }, [surahs, selectedReciter, selectedSurah, playMode, rangeStart, rangeEnd, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef]);
 
+  // Keep startPlayingRef updated (used by error/end handlers to avoid stale closures)
+  useEffect(() => {
+    startPlayingRef.current = startPlaying;
+  }, [startPlaying]);
 
   // Auto-play when navigated from My Space mood suggestion
+  // Step 1: Set playMode and selectedSurah when autoPlaySurah arrives
   useEffect(() => {
     if (autoPlaySurah && surahs.length > 0 && !loading) {
       setPlayMode("single");
       setSelectedSurah(autoPlaySurah);
-      onAutoPlayConsumed();
+      // Do NOT call onAutoPlayConsumed() here — it would null out autoPlaySurah
+      // before step 2 can read it
     }
-  }, [autoPlaySurah]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoPlaySurah, surahs.length, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Trigger startPlaying after auto-play state settles
+  // Step 2: Trigger startPlaying after state settles, then consume
   useEffect(() => {
-    if (!autoPlaySurah || surahs.length === 0 || loading || isPlaying) return;
-    if (playMode === "single" && selectedSurah === autoPlaySurah) {
-      const timer = setTimeout(() => startPlaying(0), 100);
+    const target = autoPlaySurahRef.current;
+    if (!target || surahs.length === 0 || loading || isPlaying) return;
+    if (playMode === "single" && selectedSurah === target) {
+      const timer = setTimeout(() => {
+        startPlaying(0);
+        onAutoPlayConsumed();
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [autoPlaySurah, selectedSurah, playMode, surahs.length, loading, isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedSurah, playMode, surahs.length, loading, isPlaying, startPlaying, onAutoPlayConsumed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pausePlaying = useCallback(() => {
     if (globalAudioRef.current) {
@@ -1469,8 +1492,10 @@ function ContinuousPlayer({
   const skipNext = useCallback(() => {
     if (trackIndexRef.current < playlistRef.current.length - 1) {
       if (globalAudioRef.current) {
-        globalAudioRef.current.pause();
         globalAudioRef.current.onended = null;
+        globalAudioRef.current.ontimeupdate = null;
+        globalAudioRef.current.onerror = null;
+        globalAudioRef.current.pause();
       }
       startPlaying(trackIndexRef.current + 1);
     }
@@ -1479,8 +1504,10 @@ function ContinuousPlayer({
   const skipPrev = useCallback(() => {
     if (trackIndexRef.current > 0) {
       if (globalAudioRef.current) {
-        globalAudioRef.current.pause();
         globalAudioRef.current.onended = null;
+        globalAudioRef.current.ontimeupdate = null;
+        globalAudioRef.current.onerror = null;
+        globalAudioRef.current.pause();
       }
       startPlaying(trackIndexRef.current - 1);
     }
@@ -1655,7 +1682,7 @@ function ContinuousPlayer({
                 onChange={e => setSelectedSurah(Number(e.target.value))}
                 className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
               >
-                {filteredSurahs.map(s => (
+                {surahs.map(s => (
                   <option key={s.number} value={s.number}>
                     {s.number}. {s.englishName} ({s.name}) - {s.numberOfAyahs} verses
                   </option>
@@ -1677,7 +1704,7 @@ function ContinuousPlayer({
                   }}
                   className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
                 >
-                  {filteredSurahs.map(s => (
+                  {surahs.map(s => (
                     <option key={s.number} value={s.number}>
                       {s.number}. {s.englishName}
                     </option>
@@ -1691,7 +1718,7 @@ function ContinuousPlayer({
                   onChange={e => setRangeEnd(Number(e.target.value))}
                   className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
                 >
-                  {filteredSurahs.filter(s => s.number >= rangeStart).map(s => (
+                  {surahs.filter(s => s.number >= rangeStart).map(s => (
                     <option key={s.number} value={s.number}>
                       {s.number}. {s.englishName}
                     </option>

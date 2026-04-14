@@ -152,3 +152,31 @@ Stage Summary:
 - Caption animation added: shows current ayah text with language selection (Arabic default)
 - Error handling improved: audio failures auto-skip to next verse with toast notification
 
+---
+Task ID: 1
+Agent: Main Agent
+Task: Scan and fix all issues with the Listening page (ContinuousPlayer component)
+
+Work Log:
+- Read entire page.tsx file (~3800 lines) including ContinuousPlayer, MiniPlayer, MoodQuiz, DailyMotivation, and all other components
+- Identified 5 bugs in the ContinuousPlayer/listening page:
+  1. Auto-play race condition: onAutoPlayConsumed() called immediately, nulling autoPlaySurah before step 2 could trigger startPlaying
+  2. filteredSurahs used in dropdown <select> elements, causing broken UI when search is active (selectedSurah not in filtered list)
+  3. Stale startPlaying closure: audio.onerror/onended handlers captured old startPlaying reference
+  4. Old audio handlers not cleaned: when replacing audio, onended/ontimeupdate/onerror from old audio could still fire
+  5. isPlaying desync on remount: when switching tabs, isPlaying resets to false but globalPlayer.isPlaying might still be true
+- Fixed all 5 issues:
+  - Rewrote auto-play to use a 2-step approach with autoPlaySurahRef, calling onAutoPlayConsumed() only after startPlaying fires
+  - Changed all dropdown <select> elements from filteredSurahs back to surahs (full list)
+  - Added startPlayingRef to track latest startPlaying, used in all error/end handlers
+  - Added handler cleanup (onended=null, ontimeupdate=null, onerror=null) before replacing audio in startPlaying, skipNext, skipPrev
+  - Added mount sync: useEffect that reads globalPlayer.isPlaying on component mount
+- Build verified clean (npx next build succeeded)
+
+Stage Summary:
+- Fixed 5 runtime bugs in ContinuousPlayer component
+- Auto-play from mood quiz now works correctly (2-step with ref)
+- Dropdown selections always work regardless of search state
+- No stale closure issues in audio error/end handlers
+- Proper audio cleanup prevents ghost handlers from corrupting state
+- Tab switching preserves playback state correctly

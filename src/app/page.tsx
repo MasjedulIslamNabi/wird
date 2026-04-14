@@ -1795,81 +1795,143 @@ function MoodQuiz({
 
   return (
     <div className="space-y-4">
-      {/* Idle State */}
+      {/* Idle State — Full Hero */}
       {phase === 'idle' && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="relative -mx-4 -mt-6 sm:-mx-6"
+          style={{ minHeight: 'calc(100vh - 8rem)' }}
         >
           <motion.div
-            className="relative cursor-pointer rounded-2xl overflow-hidden group"
+            className="relative h-full min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center cursor-pointer px-6 py-12 overflow-hidden"
             onClick={handleStart}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+            whileTap={{ scale: 0.995 }}
           >
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0D4B3C] via-[#145A48] to-[#1B6B52] dark:from-[#C8A951] dark:via-[#B89840] dark:to-[#A68B3A]" />
+            {/* Full background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0D4B3C] via-[#145A48] to-[#1B6B52] dark:from-[#1a1510] dark:via-[#0F1A14] dark:to-[#162118]" />
 
-            {/* Animated decorative circles */}
-            <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 animate-[pulse_4s_ease-in-out_infinite]" />
-            <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/5 animate-[pulse_5s_ease-in-out_infinite_1s]" />
-            <div className="absolute top-1/2 right-1/4 w-24 h-24 rounded-full bg-[#C8A951]/10 dark:bg-white/10 animate-[pulse_3s_ease-in-out_infinite_0.5s]" />
+            {/* Subtle Islamic pattern overlay */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C8A951' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }} />
 
-            {/* Floating stars */}
+            {/* Animated decorative elements */}
+            <div className="absolute top-0 left-0 w-72 h-72 rounded-full bg-[#C8A951]/5 blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-[#1B6B52]/30 blur-3xl dark:bg-[#C8A951]/5" />
+            <div className="absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-[#C8A951]/40 dark:bg-[#C8A951]/20 animate-pulse" />
+            <div className="absolute bottom-1/3 left-1/5 w-1.5 h-1.5 rounded-full bg-[#C8A951]/30 dark:bg-[#C8A951]/15 animate-[pulse_3s_ease-in-out_infinite]" />
+            <div className="absolute top-1/3 right-1/6 w-1 h-1 rounded-full bg-[#C8A951]/50 dark:bg-[#C8A951]/25 animate-[pulse_4s_ease-in-out_infinite_1s]" />
+
+            {/* Floating sparkles */}
             <motion.div
-              className="absolute top-4 right-6 text-[#C8A951]/60 dark:text-white/40"
-              animate={{ y: [-4, 4, -4], rotate: [0, 15, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-[15%] right-[10%] text-[#C8A951]/40 dark:text-[#C8A951]/20"
+              animate={{ y: [-6, 6, -6], rotate: [0, 20, 0], opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-6 h-6" />
             </motion.div>
             <motion.div
-              className="absolute bottom-6 left-8 text-[#C8A951]/40 dark:text-white/30"
-              animate={{ y: [3, -3, 3], rotate: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+              className="absolute bottom-[20%] left-[8%] text-[#C8A951]/30 dark:text-[#C8A951]/15"
+              animate={{ y: [4, -4, 4], rotate: [0, -15, 0], opacity: [0.2, 0.5, 0.2] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
             >
-              <Star className="w-4 h-4" />
+              <Star className="w-5 h-5" />
             </motion.div>
             <motion.div
-              className="absolute top-1/3 left-4 text-[#C8A951]/30 dark:text-white/20"
-              animate={{ y: [-2, 5, -2] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+              className="absolute top-[60%] right-[15%] text-[#C8A951]/25 dark:text-[#C8A951]/10"
+              animate={{ y: [-3, 7, -3], opacity: [0.15, 0.4, 0.15] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
             >
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-4 h-4" />
             </motion.div>
-
-            {/* Glowing heart icon */}
             <motion.div
-              className="relative z-10 mx-auto pt-8 mb-3"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-[25%] left-[20%] text-[#C8A951]/20 dark:text-[#C8A951]/10"
+              animate={{ y: [5, -5, 5], rotate: [0, 10, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
             >
-              <div className="w-20 h-20 mx-auto rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/10">
-                <Heart className="w-10 h-10 text-white" />
-              </div>
+              <Star className="w-3 h-3" />
             </motion.div>
 
-            {/* Text content */}
-            <div className="relative z-10 text-center px-6 pb-8">
-              <motion.h3
-                className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight"
-                animate={{ opacity: [0.85, 1, 0.85] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            {/* Main content */}
+            <div className="relative z-10 text-center max-w-lg mx-auto">
+              {/* Pulsing heart icon with glow ring */}
+              <motion.div
+                className="mx-auto mb-8"
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
               >
-                How Are You Feeling Right Now?
-              </motion.h3>
-              <p className="text-white/80 text-sm sm:text-base max-w-md mx-auto mb-5 leading-relaxed">
-                Answer a few heartfelt questions and discover Quranic verses &amp; Hadiths tailored to your emotional state.
+                <div className="relative">
+                  {/* Outer glow */}
+                  <motion.div
+                    className="absolute -inset-3 rounded-full bg-[#C8A951]/20 dark:bg-[#C8A951]/10 blur-lg"
+                    animate={{ opacity: [0.4, 0.8, 0.4], scale: [0.95, 1.05, 0.95] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  {/* Icon circle */}
+                  <div className="relative w-24 h-24 mx-auto rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center ring-2 ring-[#C8A951]/30 shadow-2xl">
+                    <Heart className="w-12 h-12 text-[#C8A951]" />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Arabic Bismillah */}
+              <p className="font-arabic text-xl text-white/40 mb-6 leading-[2.4]">
+                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
               </p>
+
+              {/* Title */}
+              <motion.h2
+                className="text-3xl sm:text-4xl font-extrabold text-white mb-4 leading-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              >
+                How Are You Feeling
+                <br />
+                <span className="text-[#C8A951]">Right Now?</span>
+              </motion.h2>
+
+              {/* Subtitle */}
+              <motion.p
+                className="text-white/60 text-base sm:text-lg max-w-sm mx-auto mb-10 leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.6 }}
+              >
+                Let us guide you to the perfect Quranic verses &amp; Hadiths for your heart in this moment.
+              </motion.p>
 
               {/* CTA Button */}
               <motion.div
-                className="inline-flex items-center gap-2 bg-white text-[#0D4B3C] dark:bg-[#0F1A14] dark:text-[#C8A951] px-6 py-3 rounded-xl font-semibold text-sm shadow-lg group-hover:shadow-xl transition-shadow duration-300"
-                whileHover={{ x: 4 }}
+                className="inline-flex items-center gap-3 bg-[#C8A951] text-[#0D4B3C] px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-[#C8A951]/20 hover:shadow-2xl hover:shadow-[#C8A951]/30 transition-all duration-300 group"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
               >
-                Begin Your Journey
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <Sparkles className="w-5 h-5" />
+                Start Now
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </motion.div>
+
+              {/* Trust indicators */}
+              <motion.div
+                className="mt-8 flex items-center justify-center gap-6 text-white/30 text-xs"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+              >
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Quran &amp; Hadith
+                </span>
+                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span>7 Questions</span>
+                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span>Takes 1 minute</span>
               </motion.div>
             </div>
           </motion.div>
@@ -1882,73 +1944,76 @@ function MoodQuiz({
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
+          className="-mx-4 -mt-6 sm:-mx-6"
         >
-          <Card className="overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+          <div className="bg-gradient-to-b from-[#0D4B3C] to-[#145A48] dark:from-[#0F1A14] dark:to-[#162118] px-4 py-6 sm:px-6">
+            <Card className="max-w-2xl mx-auto overflow-hidden shadow-xl border-0 bg-white dark:bg-[#1a2420]">
+              <div className="h-1 bg-gradient-to-r from-[#C8A951] via-[#D4B96A] to-[#C8A951]" />
 
-            <CardContent className="p-6">
-              {/* Progress Bar */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <button
-                    onClick={handleBack}
-                    className="flex items-center gap-1 text-sm text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0D4B3C] dark:hover:text-[#C8A951] transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    {currentQuestion === 0 ? 'Exit' : 'Back'}
-                  </button>
-                  <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-medium">
-                    {currentQuestion + 1} of {MOOD_QUESTIONS.length}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${((currentQuestion + 1) / MOOD_QUESTIONS.length) * 100}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-              </div>
-
-              {/* Question */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentQuestion}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <p className="text-lg font-semibold text-[#1A1A2E] dark:text-[#E8E0D0] mb-5 leading-relaxed">
-                    {MOOD_QUESTIONS[currentQuestion].question}
-                  </p>
-
-                  <div className="space-y-3">
-                    {MOOD_QUESTIONS[currentQuestion].options.map((option, idx) => (
-                      <motion.button
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.08, duration: 0.2 }}
-                        onClick={() => handleAnswer(idx)}
-                        className="w-full text-left p-4 rounded-xl border-2 border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951]/50 dark:hover:border-[#C8A951]/50 hover:bg-[#0D4B3C]/5 dark:hover:bg-[#C8A951]/5 transition-all duration-200 group/opt"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full border-2 border-[#C8A951]/40 group-hover/opt:border-[#C8A951] group-hover/opt:bg-[#C8A951]/10 flex items-center justify-center flex-shrink-0 transition-all">
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#C8A951] opacity-0 group-hover/opt:opacity-50 transition-opacity" />
-                          </div>
-                          <span className="text-sm text-[#4A5568] dark:text-[#9CA3AF] group-hover/opt:text-[#0D4B3C] dark:group-hover/opt:text-[#E8E0D0] transition-colors leading-relaxed">
-                            {option.label}
-                          </span>
-                        </div>
-                      </motion.button>
-                    ))}
+              <CardContent className="p-6">
+                {/* Progress Bar */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={handleBack}
+                      className="flex items-center gap-1 text-sm text-[#6B7280] dark:text-[#9CA3AF] hover:text-white dark:hover:text-[#C8A951] transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      {currentQuestion === 0 ? 'Exit' : 'Back'}
+                    </button>
+                    <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-medium">
+                      {currentQuestion + 1} of {MOOD_QUESTIONS.length}
+                    </span>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </CardContent>
-          </Card>
+                  <div className="w-full h-2 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-[#C8A951] to-[#D4B96A] rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${((currentQuestion + 1) / MOOD_QUESTIONS.length) * 100}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Question */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentQuestion}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <p className="text-lg font-semibold text-[#1A1A2E] dark:text-[#E8E0D0] mb-5 leading-relaxed">
+                      {MOOD_QUESTIONS[currentQuestion].question}
+                    </p>
+
+                    <div className="space-y-3">
+                      {MOOD_QUESTIONS[currentQuestion].options.map((option, idx) => (
+                        <motion.button
+                          key={idx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.08, duration: 0.2 }}
+                          onClick={() => handleAnswer(idx)}
+                          className="w-full text-left p-4 rounded-xl border-2 border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951] dark:hover:border-[#C8A951] hover:bg-[#C8A951]/5 transition-all duration-200 group/opt"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full border-2 border-[#C8A951]/40 group-hover/opt:border-[#C8A951] group-hover/opt:bg-[#C8A951]/10 flex items-center justify-center flex-shrink-0 transition-all">
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#C8A951] opacity-0 group-hover/opt:opacity-50 transition-opacity" />
+                            </div>
+                            <span className="text-sm text-[#4A5568] dark:text-[#9CA3AF] group-hover/opt:text-[#0D4B3C] dark:group-hover/opt:text-[#E8E0D0] transition-colors leading-relaxed">
+                              {option.label}
+                            </span>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </CardContent>
+            </Card>
+          </div>
         </motion.div>
       )}
 
@@ -1958,118 +2023,121 @@ function MoodQuiz({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="space-y-4"
+          className="-mx-4 -mt-6 sm:-mx-6"
         >
-          {/* Result Header */}
-          <Card className="overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
-            <CardContent className="p-6 sm:p-8 text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951] dark:to-[#A68B3A] flex items-center justify-center shadow-lg"
-              >
-                <Heart className="w-8 h-8 text-white dark:text-[#0F1A14]" />
-              </motion.div>
+          <div className="bg-gradient-to-b from-[#0D4B3C] to-[#145A48] dark:from-[#0F1A14] dark:to-[#162118] px-4 py-6 sm:px-6 space-y-4 max-w-2xl mx-auto">
 
-              <Badge className="mb-3 bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#C8A951]/10 dark:text-[#C8A951] text-xs px-3 py-1">
-                {MOOD_LABELS[result.primaryMood].label}
-              </Badge>
-
-              <h3 className="text-xl font-bold text-[#0D4B3C] dark:text-[#C8A951] mb-2">
-                {result.title}
-              </h3>
-              <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] max-w-md mx-auto leading-relaxed">
-                {result.message}
-              </p>
-
-              <div className="flex items-center justify-center gap-2 mt-5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReset}
-                  className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Take Again
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Personalized Dua */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#C8A951]" />
-                  <CardTitle className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">
-                    A Dua for You
-                  </CardTitle>
-                </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleCopyDua}>
-                      <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left"><p>Copy dua</p></TooltipContent>
-                </Tooltip>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.4] ${getArabicFontSize(arabicFontSize)}`}>
-                {result.duaAr}
-              </div>
-              <Separator className="my-3" />
-              <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed italic">
-                &ldquo;{result.duaEn}&rdquo;
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Recommended Quotes */}
-          <div>
-            <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951] mb-3 flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              Verses & Hadiths for You
-            </h3>
-            <div className="space-y-3">
-              {result.quotes.map((quote, idx) => (
+            {/* Result Header */}
+            <Card className="overflow-hidden shadow-xl border-0 bg-white dark:bg-[#1a2420]">
+              <div className="h-1.5 bg-gradient-to-r from-[#C8A951] via-[#D4B96A] to-[#C8A951]" />
+              <CardContent className="p-6 sm:p-8 text-center">
                 <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + idx * 0.1 }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                  className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#C8A951] to-[#A68B3A] flex items-center justify-center shadow-lg shadow-[#C8A951]/20"
                 >
-                  <Card className="islamic-border-top overflow-hidden">
-                    <CardContent className="p-5">
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] px-2 py-0.5 mb-3 ${
-                          quote.type === 'quran'
-                            ? 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951]'
-                            : 'bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#0D4B3C]/10 dark:text-[#1B6B52]'
-                        }`}
-                      >
-                        {quote.type === 'quran' ? 'Quran' : 'Hadith'}
-                      </Badge>
-
-                      <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.2] text-base ${arabicFontSize === 'lg' ? 'text-xl' : ''}`}>
-                        {quote.textAr}
-                      </div>
-                      <Separator className="my-3" />
-                      <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
-                        {islamifyNames(quote.textEn)}
-                      </p>
-                      <p className="text-xs text-[#C8A951] mt-3 font-medium">
-                        — {quote.source}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <Heart className="w-8 h-8 text-white" />
                 </motion.div>
-              ))}
+
+                <Badge className="mb-3 bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#C8A951]/10 dark:text-[#C8A951] text-xs px-3 py-1">
+                  {MOOD_LABELS[result.primaryMood].label}
+                </Badge>
+
+                <h3 className="text-xl font-bold text-[#0D4B3C] dark:text-[#C8A951] mb-2">
+                  {result.title}
+                </h3>
+                <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] max-w-md mx-auto leading-relaxed">
+                  {result.message}
+                </p>
+
+                <div className="flex items-center justify-center gap-2 mt-5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReset}
+                    className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Take Again
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Personalized Dua */}
+            <Card className="overflow-hidden shadow-lg border-0 bg-white dark:bg-[#1a2420]">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#C8A951]" />
+                    <CardTitle className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">
+                      A Dua for You
+                    </CardTitle>
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleCopyDua}>
+                        <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left"><p>Copy dua</p></TooltipContent>
+                  </Tooltip>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.4] ${getArabicFontSize(arabicFontSize)}`}>
+                  {result.duaAr}
+                </div>
+                <Separator className="my-3" />
+                <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed italic">
+                  &ldquo;{result.duaEn}&rdquo;
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Recommended Quotes */}
+            <div className="pb-2">
+              <h3 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#C8A951]" />
+                Verses & Hadiths for You
+              </h3>
+              <div className="space-y-3">
+                {result.quotes.map((quote, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.1 }}
+                  >
+                    <Card className="islamic-border-top overflow-hidden shadow-md border-0 bg-white dark:bg-[#1a2420]">
+                      <CardContent className="p-5">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] px-2 py-0.5 mb-3 ${
+                            quote.type === 'quran'
+                              ? 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951]'
+                              : 'bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#0D4B3C]/10 dark:text-[#1B6B52]'
+                          }`}
+                        >
+                          {quote.type === 'quran' ? 'Quran' : 'Hadith'}
+                        </Badge>
+
+                        <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.2] text-base ${arabicFontSize === 'lg' ? 'text-xl' : ''}`}>
+                          {quote.textAr}
+                        </div>
+                        <Separator className="my-3" />
+                        <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                          {islamifyNames(quote.textEn)}
+                        </p>
+                        <p className="text-xs text-[#C8A951] mt-3 font-medium">
+                          — {quote.source}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2197,177 +2265,139 @@ function DailyMotivation({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Daily Motivation</h2>
-        <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">A verse from the Quran to brighten your day</p>
-      </div>
-
-      {/* Daily Verse Card */}
-      <Card className="islamic-pattern-border overflow-hidden relative">
-        {/* Decorative top border */}
-        <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
-
-        <CardContent className="p-6 sm:p-8">
-          {/* Bismillah */}
-          <div className="bismillah mb-6">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-
-          {loading ? (
-            <div className="space-y-4 py-6">
-              <Skeleton className="h-16 w-full mx-auto max-w-lg" />
-              <Skeleton className="h-4 w-3/4 mx-auto" />
-              <Skeleton className="h-4 w-1/2 mx-auto" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-8">
-              <p className="text-red-500 mb-3">{error}</p>
-              <Button onClick={handleRefresh} variant="outline" className="gap-2">
-                <RefreshCw className="w-4 h-4" /> Retry
-              </Button>
-            </div>
-          ) : dailyVerse ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              {/* Arabic Text */}
-              <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-center mb-6 leading-[2.6] ${getArabicFontSize(arabicFontSize)}`}>
-                {dailyVerse.arabic}
-              </div>
-
-              <div className="w-16 h-0.5 bg-[#C8A951] mx-auto mb-6" />
-
-              {/* Translation */}
-              <p className="text-[#4A5568] dark:text-[#9CA3AF] text-center leading-relaxed mb-4 max-w-xl mx-auto">
-                {islamifyNames(dailyVerse.english)}
-              </p>
-
-              {/* Reference */}
-              <p className="text-xs text-[#C8A951] font-semibold text-center mb-6">
-                — {dailyVerse.surahName} ({dailyVerse.surahNameAr}) : {dailyVerse.ayahNumber}
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRefresh}
-                      disabled={refreshing}
-                      className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34]"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                      New Verse
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom"><p>Get a random verse</p></TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopy}
-                      className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34]"
-                    >
-                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {copied ? 'Copied!' : 'Copy'}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom"><p>Copy to clipboard</p></TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleBookmark}
-                      className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34]"
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${isBookmarked(dailyVerse.surahNumber, dailyVerse.ayahNumber) ? 'fill-[#C8A951] text-[#C8A951]' : ''}`} />
-                      Save
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom"><p>Save to bookmarks</p></TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34]"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      Share
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom"><p>Share this verse</p></TooltipContent>
-                </Tooltip>
-              </div>
-            </motion.div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {/* Mood-Based Spiritual Guidance */}
+    <div className="max-w-4xl mx-auto">
+      {/* ★ MAIN HERO: Mood-Based Spiritual Guidance ★ */}
       <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} />
 
-      {/* Hadith Card */}
-      <Card className="overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-[#C8A951]/50 via-[#C8A951] to-[#C8A951]/50" />
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#C8A951]" />
-            <CardTitle className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Hadith of the Day</CardTitle>
-          </div>
-          <CardDescription className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-            Narrated by {dailyHadith.narrator}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.4] ${getArabicFontSize(arabicFontSize)}`}>
-            {dailyHadith.textAr}
-          </div>
-          <Separator className="my-3" />
-          <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed italic">
-            &ldquo;{dailyHadith.textEn}&rdquo;
-          </p>
-          <p className="text-xs text-[#C8A951] mt-3 font-medium">
-            — {dailyHadith.source}
-          </p>
-        </CardContent>
-      </Card>
+      {/* ─── Secondary Content ─── */}
+      <div className="px-4 pb-6 sm:px-6 space-y-6">
 
-      {/* More Hadiths */}
-      <div>
-        <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951] mb-3 flex items-center gap-2">
-          <BookOpen className="w-4 h-4" />
-          More Inspirational Hadiths
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {BUNDLED_HADITHS.slice(0, 4).map((h, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <Card className="p-4">
-                <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed line-clamp-3 mb-2">
-                  &ldquo;{h.textEn}&rdquo;
-                </p>
-                <p className="text-[10px] text-[#C8A951] font-medium">— {h.source}</p>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        {/* Daily Verse Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
+              <Moon className="w-4 h-4 text-[#0D4B3C] dark:text-[#C8A951]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Verse of the Day</h3>
+              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">A fresh verse to brighten your day</p>
+            </div>
+          </div>
+
+          <Card className="islamic-pattern-border overflow-hidden relative">
+            <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+            <CardContent className="p-5 sm:p-6">
+              {loading ? (
+                <div className="space-y-3 py-4">
+                  <Skeleton className="h-12 w-full mx-auto max-w-lg" />
+                  <Skeleton className="h-3 w-3/4 mx-auto" />
+                  <Skeleton className="h-3 w-1/2 mx-auto" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-6">
+                  <p className="text-red-500 mb-3 text-sm">{error}</p>
+                  <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2">
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
+                  </Button>
+                </div>
+              ) : dailyVerse ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                  <div className="bismillah mb-4 text-sm">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+                  <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-center mb-4 leading-[2.4] ${arabicFontSize === 'sm' ? 'text-lg' : arabicFontSize === 'lg' ? 'text-2xl' : 'text-xl'}`}>
+                    {dailyVerse.arabic}
+                  </div>
+                  <div className="w-12 h-0.5 bg-[#C8A951] mx-auto mb-4" />
+                  <p className="text-[#4A5568] dark:text-[#9CA3AF] text-center leading-relaxed mb-3 max-w-xl mx-auto text-sm">
+                    {islamifyNames(dailyVerse.english)}
+                  </p>
+                  <p className="text-[10px] text-[#C8A951] font-semibold text-center mb-4">
+                    — {dailyVerse.surahName} ({dailyVerse.surahNameAr}) : {dailyVerse.ayahNumber}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs h-8">
+                      <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> New
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs h-8">
+                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copied ? 'Done' : 'Copy'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleBookmark} className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs h-8">
+                      <Heart className={`w-3 h-3 ${isBookmarked(dailyVerse.surahNumber, dailyVerse.ayahNumber) ? 'fill-[#C8A951] text-[#C8A951]' : ''}`} /> Save
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1.5 border-[#E5E1D8] dark:border-[#2D3E34] text-xs h-8">
+                      <Share2 className="w-3 h-3" /> Share
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Hadith Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-[#C8A951]/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-[#C8A951]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Hadith of the Day</h3>
+              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">Narrated by {dailyHadith.narrator}</p>
+            </div>
+          </div>
+
+          <Card className="overflow-hidden">
+            <div className="h-0.5 bg-gradient-to-r from-[#C8A951]/30 via-[#C8A951] to-[#C8A951]/30" />
+            <CardContent className="p-5">
+              <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-right mb-3 leading-[2.2] ${arabicFontSize === 'sm' ? 'text-base' : arabicFontSize === 'lg' ? 'text-xl' : 'text-lg'}`}>
+                {dailyHadith.textAr}
+              </div>
+              <Separator className="my-3" />
+              <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed italic">
+                &ldquo;{dailyHadith.textEn}&rdquo;
+              </p>
+              <p className="text-[10px] text-[#C8A951] mt-3 font-medium">— {dailyHadith.source}</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* More Hadiths */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-[#0D4B3C] dark:text-[#C8A951]" />
+            </div>
+            <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">More Inspirational Hadiths</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {BUNDLED_HADITHS.slice(0, 4).map((h, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + idx * 0.05 }}
+              >
+                <Card className="p-4">
+                  <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed line-clamp-3 mb-2">
+                    &ldquo;{h.textEn}&rdquo;
+                  </p>
+                  <p className="text-[10px] text-[#C8A951] font-medium">— {h.source}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </div>
   );

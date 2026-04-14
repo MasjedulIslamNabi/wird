@@ -412,6 +412,14 @@ export default function Home() {
   } | null>(null);
   const globalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [playerMeta, setPlayerMeta] = useState<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>(null);
+  const [autoPlaySurah, setAutoPlaySurah] = useState<number | null>(null);
+
+  // Navigate from My Space to Listen tab with a specific surah
+  const navigateToListen = useCallback((surahNumber: number) => {
+    setAutoPlaySurah(surahNumber);
+    setActiveTab('listen');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--islamic-bg)] dark:bg-[#0F1A14] transition-colors duration-300">
@@ -436,6 +444,8 @@ export default function Home() {
                 playerMeta={playerMeta}
                 setPlayerMeta={setPlayerMeta}
                 showToast={showToast}
+                autoPlaySurah={autoPlaySurah}
+                onAutoPlayConsumed={() => setAutoPlaySurah(null)}
               />
             )}
             {activeTab === 'quran' && (
@@ -459,6 +469,7 @@ export default function Home() {
                 isBookmarked={isBookmarked}
                 showToast={showToast}
                 arabicFontSize={arabicFontSize}
+                onNavigateToListen={navigateToListen}
               />
             )}
             {activeTab === 'bookmarks' && (
@@ -516,7 +527,7 @@ function IslamicHeader({
   const tabs = [
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
-    { id: 'daily' as const, label: 'Daily', icon: Sparkles },
+    { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'bookmarks' as const, label: 'Bookmarks', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -593,7 +604,7 @@ function MobileBottomNav({
   const tabs = [
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
-    { id: 'daily' as const, label: 'Daily', icon: Sparkles },
+    { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'bookmarks' as const, label: 'Saved', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -1096,16 +1107,14 @@ const SURAH_AYAH_STARTS: number[] = [
   1474, 1597, 1708, 1751, 1803, 1902, 2030, 2141, 2251, 2349,
   2484, 2596, 2674, 2792, 2856, 2933, 3160, 3253, 3341, 3410,
   3470, 3504, 3534, 3607, 3661, 3706, 3789, 3971, 4059, 4134,
-  4219, 4273, 4326, 4415, 4474, 4511, 4546, 4584, 4603, 4648,
-  4708, 4757, 4819, 4874, 4952, 5048, 5077, 5099, 5140, 5158,
-  5198, 5228, 5256, 5344, 5361, 5378, 5397, 5430, 5460, 5480,
-  5507, 5545, 5585, 5611, 5643, 5663, 5677, 5717, 5745, 5770,
-  5792, 5814, 5831, 5850, 5876, 5906, 5926, 5941, 5962, 5973,
-  5981, 5989, 6008, 6013, 6021, 6029, 6035, 6040, 6044, 6050,
-  6060, 6072, 6084, 6114, 6166, 6218, 6262, 6290, 6318, 6338,
-  6394, 6434, 6465, 6515, 6555, 6601, 6643, 6672, 6691, 6727,
-  6752, 6774, 6791, 6810, 6826, 6852, 6882, 6902, 6918, 6930,
-  6973, 7001,
+  4219, 4273, 4326, 4415, 4474, 4511, 4546, 4584, 4613, 4631,
+  4676, 4736, 4785, 4847, 4902, 4980, 5076, 5105, 5127, 5151,
+  5164, 5178, 5189, 5200, 5218, 5230, 5242, 5272, 5324, 5376,
+  5420, 5448, 5476, 5496, 5552, 5592, 5623, 5673, 5713, 5759,
+  5801, 5830, 5849, 5885, 5910, 5932, 5949, 5968, 5994, 6024,
+  6044, 6059, 6080, 6091, 6099, 6107, 6126, 6131, 6139, 6147,
+  6158, 6169, 6177, 6180, 6189, 6194, 6198, 6205, 6208, 6214,
+  6217, 6222, 6226, 6231,
 ];
 
 function getSurahForAyah(ayahAbsolute: number, surahList: SurahInfo[]): { surahNumber: number; ayahInSurah: number } {
@@ -1127,6 +1136,8 @@ function ContinuousPlayer({
   playerMeta,
   setPlayerMeta,
   showToast,
+  autoPlaySurah,
+  onAutoPlayConsumed,
 }: {
   globalPlayer: {
     isPlaying: boolean;
@@ -1152,6 +1163,8 @@ function ContinuousPlayer({
   playerMeta: { startSurah: number; endSurah: number; surahList: SurahInfo[] } | null;
   setPlayerMeta: React.Dispatch<React.SetStateAction<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>>;
   showToast: (msg: string) => void;
+  autoPlaySurah: number | null;
+  onAutoPlayConsumed: () => void;
 }) {
   const [surahs, setSurahs] = useState<SurahInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1180,6 +1193,7 @@ function ContinuousPlayer({
 
   const playlistRef = useRef<number[]>([]);
   const trackIndexRef = useRef(0);
+  const [surahSearch, setSurahSearch] = useState('');
 
   // Fetch surah list
   useEffect(() => {
@@ -1198,6 +1212,19 @@ function ContinuousPlayer({
     fetchSurahs();
     return () => { cancelled = true; };
   }, []);
+
+  // Auto-play when navigated from My Space mood suggestion
+  useEffect(() => {
+    if (autoPlaySurah && surahs.length > 0 && !loading) {
+      setPlayMode('single');
+      setSelectedSurah(autoPlaySurah);
+      onAutoPlayConsumed();
+      const timer = setTimeout(() => {
+        playSurahDirect(autoPlaySurah);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlaySurah, surahs, loading, onAutoPlayConsumed, playSurahDirect]);
 
   // Fetch verses for caption display when current surah changes during playback
   useEffect(() => {
@@ -1414,6 +1441,118 @@ function ContinuousPlayer({
     };
   }, [surahs, selectedReciter, selectedSurah, playMode, rangeStart, rangeEnd, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef]);
 
+  // Play a specific surah directly (used by auto-play from mood suggestions)
+  const playSurahDirect = useCallback((surahNumber: number) => {
+    if (surahs.length === 0) return;
+    const tracks = buildPlaylist(surahNumber, surahNumber);
+    if (tracks.length === 0) return;
+
+    playlistRef.current = tracks;
+    setPlaylist(tracks);
+    trackIndexRef.current = 0;
+    setCurrentTrackIndex(0);
+
+    const ayahAbs = tracks[0];
+    setCurrentAyahAbsolute(ayahAbs);
+
+    const { surahNumber: sn, ayahInSurah: ai } = getSurahForAyah(ayahAbs, surahs);
+    const surahInfo = surahs[sn - 1];
+    const totalAyahs = surahInfo?.numberOfAyahs || 1;
+
+    setPlayerMeta({ startSurah: surahNumber, endSurah: surahNumber, surahList: surahs });
+    setIsPlaying(true);
+    setGlobalPlayer({
+      isPlaying: true,
+      currentSurah: sn,
+      currentAyah: ai,
+      reciterId: selectedReciter.id,
+      reciterName: selectedReciter.name,
+      surahName: surahInfo?.englishName || `Surah ${sn}`,
+      surahNameAr: surahInfo?.name || '',
+      totalInSurah: totalAyahs,
+    });
+
+    if (globalAudioRef.current) {
+      globalAudioRef.current.pause();
+      globalAudioRef.current = null;
+    }
+
+    const audio = new Audio(
+      `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${ayahAbs}.mp3`
+    );
+    audio.volume = volumeRef.current;
+    globalAudioRef.current = audio;
+
+    audio.play().catch(() => {
+      showToast('Audio playback failed.');
+      setIsPlaying(false);
+    });
+    audio.ontimeupdate = () => {
+      if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
+    };
+    audio.onended = () => {
+      setProgress(0);
+      if (trackIndexRef.current < playlistRef.current.length - 1) {
+        trackIndexRef.current++;
+        const nextAyah = playlistRef.current[trackIndexRef.current];
+        setCurrentAyahAbsolute(nextAyah);
+        setCurrentTrackIndex(trackIndexRef.current);
+        const { surahNumber: nsn, ayahInSurah: nai } = getSurahForAyah(nextAyah, surahs);
+        const nsi = surahs[nsn - 1];
+        setGlobalPlayer(prev => prev ? {
+          ...prev,
+          currentSurah: nsn,
+          currentAyah: nai,
+          surahName: nsi?.englishName || `Surah ${nsn}`,
+          surahNameAr: nsi?.name || '',
+          totalInSurah: nsi?.numberOfAyahs || 1,
+        } : null);
+        const nextAudio = new Audio(
+          `https://cdn.islamic.network/quran/audio/128/${selectedReciterRef.current.id}/${nextAyah}.mp3`
+        );
+        nextAudio.volume = volumeRef.current;
+        globalAudioRef.current = nextAudio;
+        nextAudio.play().catch(() => {});
+        nextAudio.ontimeupdate = () => {
+          if (nextAudio.duration) setProgress((nextAudio.currentTime / nextAudio.duration) * 100);
+        };
+        nextAudio.onended = () => {
+          setProgress(0);
+          if (trackIndexRef.current < playlistRef.current.length - 1) {
+            trackIndexRef.current++;
+            nextAudio.onended = null;
+            startPlaying(trackIndexRef.current);
+          } else {
+            setIsPlaying(false);
+            setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+            showToast('Recitation completed');
+          }
+        };
+      } else {
+        setIsPlaying(false);
+        setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+        showToast('Recitation completed');
+      }
+    };
+    audio.onerror = () => {
+      showToast('Audio failed to load.');
+      setIsPlaying(false);
+      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+    };
+  }, [surahs, selectedReciter, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef, startPlaying]);
+
+  // Ref-based version for auto-play from external navigation
+  const startPlayingRef = useRef<(surahNumber?: number) => void>(() => {});
+  startPlayingRef.current = (surahNumber?: number) => {
+    if (surahNumber !== undefined) {
+      // Temporarily override selectedSurah and playMode via refs
+      setSelectedSurah(surahNumber);
+      setPlayMode('single');
+    }
+    // Use setTimeout to let state update propagate
+    setTimeout(() => startPlaying(0), 50);
+  };
+
   const pausePlaying = useCallback(() => {
     if (globalAudioRef.current) {
       globalAudioRef.current.pause();
@@ -1497,6 +1636,18 @@ function ContinuousPlayer({
   const effectiveStart = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeStart : 1;
   const effectiveEnd = playMode === 'single' ? selectedSurah : playMode === 'range' ? rangeEnd : 114;
 
+  const filteredSurahs = useMemo(() => {
+    if (!surahSearch.trim()) return surahs;
+    const q = surahSearch.toLowerCase().trim();
+    return surahs.filter(s =>
+      s.number.toString() === q ||
+      s.englishName.toLowerCase().includes(q) ||
+      s.englishNameTranslation.toLowerCase().includes(q) ||
+      s.name.includes(q) ||
+      s.revelationType.toLowerCase().includes(q)
+    );
+  }, [surahs, surahSearch]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
@@ -1509,6 +1660,33 @@ function ContinuousPlayer({
           <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Listen to the Noble Quran continuously</p>
         </motion.div>
       </div>
+
+      {/* Search Surahs */}
+      <Card className="mb-4 overflow-hidden">
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+            <input
+              type="text"
+              placeholder="Search surahs by name, number, or type..."
+              value={surahSearch}
+              onChange={e => setSurahSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F8F6F0] dark:bg-[#0F1A14] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-xl text-[#1A1A2E] dark:text-[#E8E0D0] placeholder-[#9CA3AF]/60 focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30 transition-all"
+            />
+            {surahSearch && (
+              <button
+                onClick={() => setSurahSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {surahSearch && (
+            <p className="text-[10px] text-[#9CA3AF] mt-1.5">{filteredSurahs.length} surah{filteredSurahs.length !== 1 ? 's' : ''} found</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Reciter Selector */}
       <Card className="mb-4 overflow-hidden">
@@ -1582,7 +1760,7 @@ function ContinuousPlayer({
                 onChange={e => setSelectedSurah(Number(e.target.value))}
                 className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
               >
-                {surahs.map(s => (
+                {filteredSurahs.map(s => (
                   <option key={s.number} value={s.number}>
                     {s.number}. {s.englishName} ({s.name}) - {s.numberOfAyahs} verses
                   </option>
@@ -1604,7 +1782,7 @@ function ContinuousPlayer({
                   }}
                   className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
                 >
-                  {surahs.map(s => (
+                  {filteredSurahs.map(s => (
                     <option key={s.number} value={s.number}>
                       {s.number}. {s.englishName}
                     </option>
@@ -1618,7 +1796,7 @@ function ContinuousPlayer({
                   onChange={e => setRangeEnd(Number(e.target.value))}
                   className="w-full text-sm bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-lg px-3 py-2.5 text-[#1A1A2E] dark:text-[#E8E0D0] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30"
                 >
-                  {surahs.filter(s => s.number >= rangeStart).map(s => (
+                  {filteredSurahs.filter(s => s.number >= rangeStart).map(s => (
                     <option key={s.number} value={s.number}>
                       {s.number}. {s.englishName}
                     </option>
@@ -2622,6 +2800,78 @@ const MOOD_MESSAGES: Record<MoodCategory, { title: string; message: string }> = 
   },
 };
 
+// ─── Surah Suggestions by Mood ─────────────────────────────
+
+interface MoodSurahSuggestion {
+  surahNumber: number;
+  surahName: string;
+  surahNameAr: string;
+  reason: string;
+}
+
+const MOOD_SURAHS: Record<MoodCategory, MoodSurahSuggestion[]> = {
+  sad: [
+    { surahNumber: 94, surahName: 'Ash-Sharh', surahNameAr: 'الشرح', reason: 'Reminds us that hardship is followed by ease — comfort for a heavy heart' },
+    { surahNumber: 93, surahName: 'Ad-Duha', surahNameAr: 'الضحى', reason: 'Allah never abandons you — His mercy is always near' },
+    { surahNumber: 12, surahName: 'Yusuf', surahNameAr: 'يوسف', reason: 'A story of patience through loss, betrayal, and ultimate relief from Allah' },
+    { surahNumber: 2, surahName: 'Al-Baqarah', surahNameAr: 'البقرة', reason: 'Contains the greatest verse (Ayatul Kursi) — a source of peace and protection' },
+  ],
+  anxious: [
+    { surahNumber: 13, surahName: 'Ar-Ra\'d', surahNameAr: 'الرعد', reason: 'Hearts find rest only in the remembrance of Allah' },
+    { surahNumber: 65, surahName: 'At-Talaq', surahNameAr: 'الطلاق', reason: 'Whoever relies upon Allah — He is sufficient for them' },
+    { surahNumber: 20, surahName: 'Ta-Ha', surahNameAr: 'طه', reason: 'A soothing surah that brings tranquility to anxious hearts' },
+    { surahNumber: 40, surahName: 'Ghafir', surahNameAr: 'غافر', reason: 'The Forgiver — a surah of hope and reassurance for the worried soul' },
+  ],
+  angry: [
+    { surahNumber: 3, surahName: 'Ali Imran', surahNameAr: 'آل عمران', reason: 'Those who suppress anger and forgive others — Allah loves the doers of good' },
+    { surahNumber: 41, surahName: 'Fussilat', surahNameAr: 'فصلت', reason: 'Repel evil with that which is better — and your enemy will become a close friend' },
+    { surahNumber: 7, surahName: 'Al-A\'raf', surahNameAr: 'الأعراف', reason: 'Speak good to people — a reminder of patience and wisdom in anger' },
+    { surahNumber: 42, surahName: 'Ash-Shura', surahNameAr: 'الشورى', reason: 'Those who forgive and reconcile — Allah loves the good-doers' },
+  ],
+  grateful: [
+    { surahNumber: 55, surahName: 'Ar-Rahman', surahNameAr: 'الرحمن', reason: 'Which of the favors of your Lord would you deny? A surah of pure gratitude' },
+    { surahNumber: 14, surahName: 'Ibrahim', surahNameAr: 'إبراهيم', reason: 'If you are grateful, Allah will give you more — the promise of abundance' },
+    { surahNumber: 67, surahName: 'Al-Mulk', surahNameAr: 'الملك', reason: 'Reflect on the creation — gratitude through recognizing Allah\'s blessings' },
+    { surahNumber: 31, surahName: 'Luqman', surahNameAr: 'لقمان', reason: 'Wisdom to appreciate every blessing Allah has bestowed upon you' },
+  ],
+  lonely: [
+    { surahNumber: 93, surahName: 'Ad-Duha', surahNameAr: 'الضحى', reason: 'Your Lord has not forsaken you — companionship through Allah\'s presence' },
+    { surahNumber: 112, surahName: 'Al-Ikhlas', surahNameAr: 'الإخلاص', reason: 'One-third of the Quran — Allah is always with you, closer than your jugular vein' },
+    { surahNumber: 36, surahName: 'Yasin', surahNameAr: 'يس', reason: 'The heart of the Quran — brings warmth and connection to the Divine' },
+    { surahNumber: 108, surahName: 'Al-Kawthar', surahNameAr: 'الكوثر', reason: 'You are given abundance — Allah\'s love for you is limitless' },
+  ],
+  stressed: [
+    { surahNumber: 94, surahName: 'Ash-Sharh', surahNameAr: 'الشرح', reason: 'Indeed, with hardship comes ease — repeated twice for emphasis and relief' },
+    { surahNumber: 2, surahName: 'Al-Baqarah', surahNameAr: 'البقرة', reason: 'Allah does not burden a soul beyond its capacity — you are strong enough' },
+    { surahNumber: 113, surahName: 'Al-Falaq', surahNameAr: 'الفلق', reason: 'Seeking refuge from harm and the pressures that overwhelm you' },
+    { surahNumber: 114, surahName: 'An-Nas', surahNameAr: 'الناس', reason: 'Seeking protection from the whisperings that cause stress and anxiety' },
+  ],
+  hopeful: [
+    { surahNumber: 76, surahName: 'Al-Insan', surahNameAr: 'الإنسان', reason: 'The story of the righteous who fulfill their vows — a vision of what hope leads to' },
+    { surahNumber: 108, surahName: 'Al-Kawthar', surahNameAr: 'الكوثر', reason: 'Abundance and paradise await those who remain hopeful and grateful' },
+    { surahNumber: 18, surahName: 'Al-Kahf', surahNameAr: 'الكهف', reason: 'Stories of faith, perseverance, and divine guidance for the hopeful soul' },
+    { surahNumber: 91, surahName: 'Ash-Shams', surahNameAr: 'الشمس', reason: 'Allah purifies the soul — a promise of growth and brighter days ahead' },
+  ],
+  seeking: [
+    { surahNumber: 1, surahName: 'Al-Fatiha', surahNameAr: 'الفاتحة', reason: 'The opening — your direct conversation with Allah, the ultimate guide' },
+    { surahNumber: 103, surahName: 'Al-Asr', surahNameAr: 'العصر', reason: 'The essence of guidance — faith, patience, and truth' },
+    { surahNumber: 73, surahName: 'Al-Muzzammil', surahNameAr: 'المزمل', reason: 'Stand in prayer at night — the path to spiritual clarity and guidance' },
+    { surahNumber: 35, surahName: 'Fatir', surahNameAr: 'فاطر', reason: 'If you are grateful, He will increase you — a surah of seeking and finding' },
+  ],
+  peaceful: [
+    { surahNumber: 36, surahName: 'Yasin', surahNameAr: 'يس', reason: 'The heart of the Quran — brings serenity and peace to the soul' },
+    { surahNumber: 55, surahName: 'Ar-Rahman', surahNameAr: 'الرحمن', reason: 'A symphony of gratitude that fills the heart with contentment' },
+    { surahNumber: 56, surahName: 'Al-Waqi\'ah', surahNameAr: 'الواقعة', reason: 'Reflecting on the Hereafter brings deep inner peace' },
+    { surahNumber: 57, surahName: 'Al-Hadid', surahNameAr: 'الحديد', reason: 'Know that the life of this world is but play — true peace lies with Allah' },
+  ],
+  repentant: [
+    { surahNumber: 39, surahName: 'Az-Zumar', surahNameAr: 'الزمر', reason: 'Do not despair of the mercy of Allah — the ultimate message of repentance' },
+    { surahNumber: 40, surahName: 'Ghafir', surahNameAr: 'غافر', reason: 'The Forgiver — He is always ready to accept your sincere repentance' },
+    { surahNumber: 25, surahName: 'Al-Furqan', surahNameAr: 'الفرقان', reason: 'The Criterion between truth and falsehood — guidance back to the right path' },
+    { surahNumber: 71, surahName: 'Nuh', surahNameAr: 'نوح', reason: 'Prophet Nuh\'s prayer of repentance — a beautiful example of returning to Allah' },
+  ],
+};
+
 function calculateMoodProfile(answers: number[]): MoodProfile {
   const tagCounts: Record<string, number> = {};
   answers.forEach((optionIndex, questionIndex) => {
@@ -2681,9 +2931,11 @@ function calculateMoodProfile(answers: number[]): MoodProfile {
 function MoodQuiz({
   showToast,
   arabicFontSize,
+  onNavigateToListen,
 }: {
   showToast: (msg: string) => void;
   arabicFontSize: string;
+  onNavigateToListen: (surahNumber: number) => void;
 }) {
   const [phase, setPhase] = useState<'idle' | 'quiz' | 'results'>('idle');
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -3081,6 +3333,50 @@ function MoodQuiz({
                 ))}
               </div>
             </div>
+
+            {/* ★ Surah Suggestions based on Mood ★ */}
+            {result && MOOD_SURAHS[result.primaryMood] && (
+              <div className="pb-4">
+                <h3 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-[#C8A951]" />
+                  Surahs Recommended for You
+                </h3>
+                <div className="space-y-3">
+                  {MOOD_SURAHS[result.primaryMood].map((s, idx) => (
+                    <motion.div
+                      key={s.surahNumber}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + idx * 0.1 }}
+                    >
+                      <Card className="overflow-hidden shadow-md border-0 bg-white dark:bg-[#1a2420]">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-[#C8A951]">{s.surahNumber}</span>
+                                <span className="text-sm font-semibold text-[#0D4B3C] dark:text-[#E8E0D0]">{s.surahName}</span>
+                                <span dir="rtl" lang="ar" className="font-arabic text-sm text-[#C8A951]/70">{s.surahNameAr}</span>
+                              </div>
+                              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">{s.reason}</p>
+                            </div>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => onNavigateToListen(s.surahNumber)}
+                              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#C8A951] text-[#0D4B3C] text-xs font-bold shadow-md shadow-[#C8A951]/20 hover:shadow-lg transition-all"
+                            >
+                              <Play className="w-3 h-3" />
+                              Listen
+                            </motion.button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
@@ -3096,11 +3392,13 @@ function DailyMotivation({
   isBookmarked,
   showToast,
   arabicFontSize,
+  onNavigateToListen,
 }: {
   addBookmark: (b: BookmarkItem) => void;
   isBookmarked: (s: number, a: number) => boolean;
   showToast: (msg: string) => void;
   arabicFontSize: string;
+  onNavigateToListen: (surahNumber: number) => void;
 }) {
   const [dailyVerse, setDailyVerse] = useState<{
     arabic: string;
@@ -3209,7 +3507,7 @@ function DailyMotivation({
   return (
     <div className="max-w-4xl mx-auto">
       {/* ★ MAIN HERO: Mood-Based Spiritual Guidance ★ */}
-      <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} />
+      <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} onNavigateToListen={onNavigateToListen} />
 
       {/* ─── Secondary Content ─── */}
       <div className="px-4 pb-6 sm:px-6 space-y-6">

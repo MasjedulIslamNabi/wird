@@ -180,3 +180,29 @@ Stage Summary:
 - No stale closure issues in audio error/end handlers
 - Proper audio cleanup prevents ghost handlers from corrupting state
 - Tab switching preserves playback state correctly
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Scan and fix listening page issues, restore preview
+
+Work Log:
+- Read entire page.tsx (3822 lines) including ContinuousPlayer, MiniPlayer, MoodQuiz, DailyMotivation, BookmarksView, SettingsView
+- Identified root cause of "preview is off": dev server process was dead (PID 1128 in .zscripts/dev.pid was no longer running)
+- Identified globalAudioRef type mismatch: declared as React.RefObject (readonly .current) but code assigns to it in ContinuousPlayer and MiniPlayer
+- Fixed globalAudioRef to use React.MutableRefObject<HTMLAudioElement | null> in Home component
+- Updated ContinuousPlayer prop type from React.RefObject to React.MutableRefObject
+- Updated MiniPlayer prop type from React.RefObject to React.MutableRefObject
+- Removed unnecessary type casts in MiniPlayer (2 instances of `as React.MutableRefObject`)
+- Verified all component logic: startPlaying, auto-play, onended handlers, skipNext/skipPrev, stopPlaying, resumePlaying
+- Confirmed no TooltipProvider issue (Tooltip component self-wraps with provider)
+- Confirmed SURAH_AYAH_STARTS array is correct (114 entries, previously fixed)
+- Confirmed playSurahDirect temporal dead zone is fixed (removed entirely, using startPlaying directly)
+- Rebuilt project successfully (npx next build)
+- Restarted dev server on port 3000
+
+Stage Summary:
+- Preview was off because the dev server process had died
+- Fixed globalAudioRef type safety (RefObject → MutableRefObject) across 3 components
+- Dev server restarted and serving on port 3000
+- Build passes cleanly

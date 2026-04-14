@@ -411,7 +411,7 @@ export default function Home() {
     surahNameAr: string;
     totalInSurah: number;
   } | null>(null);
-  const globalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const globalAudioRef = useRef<HTMLAudioElement | null>(null) as React.MutableRefObject<HTMLAudioElement | null>;
   const [playerMeta, setPlayerMeta] = useState<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>(null);
   const [autoPlaySurah, setAutoPlaySurah] = useState<number | null>(null);
 
@@ -1160,7 +1160,7 @@ function ContinuousPlayer({
     surahNameAr: string;
     totalInSurah: number;
   } | null>>;
-  globalAudioRef: React.RefObject<HTMLAudioElement | null>;
+  globalAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
   playerMeta: { startSurah: number; endSurah: number; surahList: SurahInfo[] } | null;
   setPlayerMeta: React.Dispatch<React.SetStateAction<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>>;
   showToast: (msg: string) => void;
@@ -1977,7 +1977,7 @@ function MiniPlayer({
     surahNameAr: string;
     totalInSurah: number;
   };
-  globalAudioRef: React.RefObject<HTMLAudioElement | null>;
+  globalAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
   setGlobalPlayer: React.Dispatch<React.SetStateAction<{
     isPlaying: boolean;
     currentSurah: number;
@@ -2051,7 +2051,7 @@ function MiniPlayer({
         `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${nextAbsolute}.mp3`
       );
       nextAudio.volume = 1.0;
-      (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = nextAudio;
+      globalAudioRef.current = nextAudio;
       nextAudio.play().catch(() => {});
 
       setGlobalPlayer({
@@ -2099,7 +2099,7 @@ function MiniPlayer({
         `https://cdn.islamic.network/quran/audio/128/${globalPlayer.reciterId}/${prevAbsolute}.mp3`
       );
       prevAudio.volume = 1.0;
-      (globalAudioRef as React.MutableRefObject<HTMLAudioElement | null>).current = prevAudio;
+      globalAudioRef.current = prevAudio;
       prevAudio.play().catch(() => {});
 
       setGlobalPlayer({

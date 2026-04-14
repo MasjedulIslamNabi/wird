@@ -1429,130 +1429,24 @@ function ContinuousPlayer({
     };
   }, [surahs, selectedReciter, selectedSurah, playMode, rangeStart, rangeEnd, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef]);
 
-  // Play a specific surah directly (used by auto-play from mood suggestions)
-  const playSurahDirect = useCallback((surahNumber: number) => {
-    if (surahs.length === 0) return;
-    const tracks = buildPlaylist(surahNumber, surahNumber);
-    if (tracks.length === 0) return;
-
-    playlistRef.current = tracks;
-    setPlaylist(tracks);
-    trackIndexRef.current = 0;
-    setCurrentTrackIndex(0);
-
-    const ayahAbs = tracks[0];
-    setCurrentAyahAbsolute(ayahAbs);
-
-    const { surahNumber: sn, ayahInSurah: ai } = getSurahForAyah(ayahAbs, surahs);
-    const surahInfo = surahs[sn - 1];
-    const totalAyahs = surahInfo?.numberOfAyahs || 1;
-
-    setPlayerMeta({ startSurah: surahNumber, endSurah: surahNumber, surahList: surahs });
-    setIsPlaying(true);
-    setGlobalPlayer({
-      isPlaying: true,
-      currentSurah: sn,
-      currentAyah: ai,
-      reciterId: selectedReciter.id,
-      reciterName: selectedReciter.name,
-      surahName: surahInfo?.englishName || `Surah ${sn}`,
-      surahNameAr: surahInfo?.name || '',
-      totalInSurah: totalAyahs,
-    });
-
-    if (globalAudioRef.current) {
-      globalAudioRef.current.pause();
-      globalAudioRef.current = null;
-    }
-
-    const audio = new Audio(
-      `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${ayahAbs}.mp3`
-    );
-    audio.volume = volumeRef.current;
-    globalAudioRef.current = audio;
-
-    audio.play().catch(() => {
-      showToast('Audio playback failed.');
-      setIsPlaying(false);
-    });
-    audio.ontimeupdate = () => {
-      if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
-    };
-    audio.onended = () => {
-      setProgress(0);
-      if (trackIndexRef.current < playlistRef.current.length - 1) {
-        trackIndexRef.current++;
-        const nextAyah = playlistRef.current[trackIndexRef.current];
-        setCurrentAyahAbsolute(nextAyah);
-        setCurrentTrackIndex(trackIndexRef.current);
-        const { surahNumber: nsn, ayahInSurah: nai } = getSurahForAyah(nextAyah, surahs);
-        const nsi = surahs[nsn - 1];
-        setGlobalPlayer(prev => prev ? {
-          ...prev,
-          currentSurah: nsn,
-          currentAyah: nai,
-          surahName: nsi?.englishName || `Surah ${nsn}`,
-          surahNameAr: nsi?.name || '',
-          totalInSurah: nsi?.numberOfAyahs || 1,
-        } : null);
-        const nextAudio = new Audio(
-          `https://cdn.islamic.network/quran/audio/128/${selectedReciterRef.current.id}/${nextAyah}.mp3`
-        );
-        nextAudio.volume = volumeRef.current;
-        globalAudioRef.current = nextAudio;
-        nextAudio.play().catch(() => {});
-        nextAudio.ontimeupdate = () => {
-          if (nextAudio.duration) setProgress((nextAudio.currentTime / nextAudio.duration) * 100);
-        };
-        nextAudio.onended = () => {
-          setProgress(0);
-          if (trackIndexRef.current < playlistRef.current.length - 1) {
-            trackIndexRef.current++;
-            nextAudio.onended = null;
-            startPlaying(trackIndexRef.current);
-          } else {
-            setIsPlaying(false);
-            setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
-            showToast('Recitation completed');
-          }
-        };
-      } else {
-        setIsPlaying(false);
-        setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
-        showToast('Recitation completed');
-      }
-    };
-    audio.onerror = () => {
-      showToast('Audio failed to load.');
-      setIsPlaying(false);
-      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
-    };
-  }, [surahs, selectedReciter, buildPlaylist, setGlobalPlayer, setPlayerMeta, showToast, globalAudioRef, startPlaying]);
 
   // Auto-play when navigated from My Space mood suggestion
   useEffect(() => {
     if (autoPlaySurah && surahs.length > 0 && !loading) {
-      setPlayMode('single');
+      setPlayMode("single");
       setSelectedSurah(autoPlaySurah);
       onAutoPlayConsumed();
-      const timer = setTimeout(() => {
-        playSurahDirect(autoPlaySurah);
-      }, 200);
+    }
+  }, [autoPlaySurah]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trigger startPlaying after auto-play state settles
+  useEffect(() => {
+    if (!autoPlaySurah || surahs.length === 0 || loading || isPlaying) return;
+    if (playMode === "single" && selectedSurah === autoPlaySurah) {
+      const timer = setTimeout(() => startPlaying(0), 100);
       return () => clearTimeout(timer);
     }
-  }, [autoPlaySurah, surahs, loading, onAutoPlayConsumed, playSurahDirect]);
-
-  // Ref-based version for auto-play from external navigation
-  const startPlayingRef = useRef<(surahNumber?: number) => void>(() => {});
-  startPlayingRef.current = (surahNumber?: number) => {
-    if (surahNumber !== undefined) {
-      // Temporarily override selectedSurah and playMode via refs
-      setSelectedSurah(surahNumber);
-      setPlayMode('single');
-    }
-    // Use setTimeout to let state update propagate
-    setTimeout(() => startPlaying(0), 50);
-  };
+  }, [autoPlaySurah, selectedSurah, playMode, surahs.length, loading, isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pausePlaying = useCallback(() => {
     if (globalAudioRef.current) {

@@ -201,11 +201,11 @@ const TOTAL_VERSES = 6236;
 
 const RECITERS = [
   { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', shortName: 'Alafasy' },
-  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', shortName: 'Abdul Basit' },
   { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', shortName: 'Husary' },
   { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', shortName: 'Minshawi' },
-  { id: 'ar.abdurrahmaansudais', name: 'Abdurrahmaan As-Sudais', shortName: 'Sudais' },
   { id: 'ar.mahermuaiqly', name: 'Maher Al Muaiqly', shortName: 'Muaiqly' },
+  { id: 'ar.ahmedajamy', name: 'Ahmed ibn Ali Al-Ajamy', shortName: 'Al-Ajamy' },
+  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', shortName: 'Hudhaify' },
 ];
 
 // ─── Islamic Name Correction ─────────────────────────────
@@ -1166,6 +1166,15 @@ function ContinuousPlayer({
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
+  // Caption state
+  const [captionLanguage, setCaptionLanguage] = useState<'arabic' | 'english' | 'bangla'>('arabic');
+  const [captionTexts, setCaptionTexts] = useState({ arabic: '', english: '', bangla: '' });
+  const [captionKey, setCaptionKey] = useState('');
+  const surahVersesRef = useRef<Record<number, { arabic: string[]; english: string[]; bangla: string[] }>>({});
+  const lastCaptionSurahRef = useRef(0);
+  const selectedReciterRef = useRef(selectedReciter);
+  selectedReciterRef.current = selectedReciter;
+
   const playlistRef = useRef<number[]>([]);
   const trackIndexRef = useRef(0);
 
@@ -1186,6 +1195,39 @@ function ContinuousPlayer({
     fetchSurahs();
     return () => { cancelled = true; };
   }, []);
+
+  // Fetch verses for caption display when current surah changes during playback
+  useEffect(() => {
+    if (!isPlaying || currentAyahAbsolute <= 0 || surahs.length === 0) return;
+    const { surahNumber } = getSurahForAyah(currentAyahAbsolute, surahs);
+    if (surahNumber === lastCaptionSurahRef.current) return;
+    lastCaptionSurahRef.current = surahNumber;
+
+    let cancelled = false;
+    fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.sahih,bn.bengali`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.code === 200 && Array.isArray(data.data)) {
+          const fetched = {
+            arabic: data.data[0].ayahs.map((a: { text: string }) => a.text),
+            english: data.data[1].ayahs.map((a: { text: string }) => islamifyNames(a.text)),
+            bangla: data.data[2].ayahs.map((a: { text: string }) => a.text),
+          };
+          surahVersesRef.current[surahNumber] = fetched;
+          const { ayahInSurah } = getSurahForAyah(currentAyahAbsolute, surahs);
+          const idx = ayahInSurah - 1;
+          setCaptionTexts({
+            arabic: fetched.arabic[idx] || '',
+            english: fetched.english[idx] || '',
+            bangla: fetched.bangla[idx] || '',
+          });
+          setCaptionKey(`${surahNumber}:${ayahInSurah}`);
+        }
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [isPlaying, currentAyahAbsolute, surahs]);
 
   // Build playlist
   const buildPlaylist = useCallback((start: number, end: number) => {
@@ -1231,6 +1273,18 @@ function ContinuousPlayer({
     const surahInfo = surahs[surahNumber - 1];
     const totalAyahs = surahInfo?.numberOfAyahs || 1;
 
+    // Update caption text for current ayah
+    const cache = surahVersesRef.current[surahNumber];
+    const aIdx = ayahInSurah - 1;
+    if (cache) {
+      setCaptionTexts({
+        arabic: cache.arabic[aIdx] || '',
+        english: cache.english[aIdx] || '',
+        bangla: cache.bangla[aIdx] || '',
+      });
+    }
+    setCaptionKey(`${surahNumber}:${ayahInSurah}`);
+
     setPlayerMeta({ startSurah: startS, endSurah: endS, surahList: surahs });
     setIsPlaying(true);
     setGlobalPlayer({
@@ -1256,10 +1310,24 @@ function ContinuousPlayer({
     globalAudioRef.current = audio;
 
     audio.play().catch(() => {
-      showToast('Audio playback failed. Try again.');
-      setIsPlaying(false);
-      setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+      showToast('Audio playback failed. Trying next verse...');
+      if (trackIndexRef.current < playlistRef.current.length - 1) {
+        setTimeout(() => startPlaying(trackIndexRef.current + 1), 300);
+      } else {
+        setIsPlaying(false);
+        setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+      }
     });
+
+    audio.onerror = () => {
+      showToast('Audio failed to load. Skipping...');
+      if (trackIndexRef.current < playlistRef.current.length - 1) {
+        setTimeout(() => startPlaying(trackIndexRef.current + 1), 300);
+      } else {
+        setIsPlaying(false);
+        setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+      }
+    };
 
     audio.ontimeupdate = () => {
       if (audio.duration) {
@@ -1269,7 +1337,6 @@ function ContinuousPlayer({
 
     audio.onended = () => {
       setProgress(0);
-      // Auto advance to next track
       if (trackIndexRef.current < playlistRef.current.length - 1) {
         trackIndexRef.current++;
         const nextAyah = playlistRef.current[trackIndexRef.current];
@@ -1278,6 +1345,19 @@ function ContinuousPlayer({
 
         const { surahNumber: sn, ayahInSurah: ai } = getSurahForAyah(nextAyah, surahs);
         const si = surahs[sn - 1];
+
+        // Update caption for next ayah
+        const nextCache = surahVersesRef.current[sn];
+        const nIdx = ai - 1;
+        if (nextCache) {
+          setCaptionTexts({
+            arabic: nextCache.arabic[nIdx] || '',
+            english: nextCache.english[nIdx] || '',
+            bangla: nextCache.bangla[nIdx] || '',
+          });
+        }
+        setCaptionKey(`${sn}:${ai}`);
+
         setGlobalPlayer(prev => prev ? {
           ...prev,
           currentSurah: sn,
@@ -1287,8 +1367,9 @@ function ContinuousPlayer({
           totalInSurah: si?.numberOfAyahs || 1,
         } : null);
 
+        const reciterToUse = selectedReciterRef.current.id;
         const nextAudio = new Audio(
-          `https://cdn.islamic.network/quran/audio/128/${selectedReciter.id}/${nextAyah}.mp3`
+          `https://cdn.islamic.network/quran/audio/128/${reciterToUse}/${nextAyah}.mp3`
         );
         globalAudioRef.current = nextAudio;
         nextAudio.play().catch(() => {});
@@ -1300,7 +1381,19 @@ function ContinuousPlayer({
         nextAudio.onended = () => {
           setProgress(0);
           if (trackIndexRef.current < playlistRef.current.length - 1) {
-            // Recursive call handled by the same logic
+            trackIndexRef.current++;
+            nextAudio.onended = null;
+            startPlaying(trackIndexRef.current);
+          } else {
+            setIsPlaying(false);
+            setGlobalPlayer(prev => prev ? { ...prev, isPlaying: false } : null);
+            showToast('Recitation completed');
+          }
+        };
+        nextAudio.onerror = () => {
+          showToast('Audio failed. Skipping...');
+          if (trackIndexRef.current < playlistRef.current.length - 1) {
+            trackIndexRef.current++;
             nextAudio.onended = null;
             startPlaying(trackIndexRef.current);
           } else {
@@ -1366,6 +1459,9 @@ function ContinuousPlayer({
     setProgress(0);
     playlistRef.current = [];
     trackIndexRef.current = 0;
+    lastCaptionSurahRef.current = 0;
+    setCaptionTexts({ arabic: '', english: '', bangla: '' });
+    setCaptionKey('');
     setGlobalPlayer(null);
     setPlayerMeta(null);
   }, [globalAudioRef, setGlobalPlayer, setPlayerMeta]);
@@ -1626,6 +1722,74 @@ function ContinuousPlayer({
               </div>
             </CardContent>
           </Card>
+
+          {/* Caption Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.3 }}
+          >
+            <Card className="mt-3 overflow-hidden border border-[#C8A951]/20 bg-gradient-to-b from-[#FAFAF5] to-white dark:from-[#162118] dark:to-[#0F1A14]">
+              <div className="h-px bg-gradient-to-r from-transparent via-[#C8A951]/40 to-transparent" />
+              <CardContent className="p-5">
+                {/* Language Selector */}
+                <div className="flex items-center justify-center gap-1.5 mb-4">
+                  <Globe className="w-3.5 h-3.5 text-[#C8A951] mr-1" />
+                  {(['arabic', 'english', 'bangla'] as const).map(lang => (
+                    <button
+                      key={lang}
+                      onClick={() => setCaptionLanguage(lang)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                        captionLanguage === lang
+                          ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C] shadow-sm'
+                          : 'bg-[#E5E1D8]/50 dark:bg-[#2D3E34]/50 text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                      }`}
+                    >
+                      {lang === 'arabic' ? 'عربي' : lang === 'english' ? 'English' : 'বাংলা'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Animated Caption Text */}
+                <div className="min-h-[80px] flex items-center justify-center">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={captionKey}
+                      initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="w-full text-center px-2"
+                    >
+                      {captionLanguage === 'arabic' ? (
+                        <div dir="rtl" lang="ar">
+                          <p className="font-arabic text-2xl text-[#0D4B3C] dark:text-[#E8E0D0] leading-[2]">
+                            {captionTexts.arabic}
+                          </p>
+                        </div>
+                      ) : captionLanguage === 'english' ? (
+                        <p className="text-base text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed italic">
+                          &ldquo;{captionTexts.english}&rdquo;
+                        </p>
+                      ) : (
+                        <p className="text-base text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed">
+                          {captionTexts.bangla}
+                        </p>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Ayah indicator */}
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <div className="verse-badge text-[10px]">{globalPlayer?.currentAyah ? formatAyahNumber(globalPlayer.currentAyah) : ''}</div>
+                  <p className="text-[11px] text-[#9CA3AF] dark:text-[#6B7280]">
+                    {globalPlayer?.surahName} • Verse {globalPlayer?.currentAyah} of {globalPlayer?.totalInSurah}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
       )}
 

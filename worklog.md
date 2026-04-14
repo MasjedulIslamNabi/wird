@@ -127,3 +127,28 @@ Stage Summary:
 - Users can choose: single surah, custom range, or all 114 surahs
 - Mini-player persists across tabs for uninterrupted listening
 - All 6 reciters available: Alafasy, Abdul Basit, Husary, Minshawi, Sudais, Muaiqly
+---
+Task ID: 1
+Agent: Main
+Task: Fix audio double-play bug, fix reciter voices, add caption animation
+
+Work Log:
+- Read the entire page.tsx (3500+ lines) to understand audio implementation
+- Identified double-play bug: nested onended handler called startPlaying without incrementing trackIndexRef
+- Identified reciter voice issue: CDN returns 403 for ar.abdulbasitmurattal and ar.abdurrahmaansudais
+- Verified all reciter CDN URLs with curl tests
+- Fixed double-play bug by adding trackIndexRef.current++ before recursive startPlaying call
+- Replaced broken reciters with working alternatives (Al-Ajamy, Hudhaify)
+- Added selectedReciterRef to avoid stale closure issues in onended handlers
+- Added audio onerror handler for graceful skip-on-failure behavior
+- Added caption system: language selector (Arabic/English/Bangla), animated text display
+- Added verse fetching useEffect that caches surah text for caption display
+- Added AnimatePresence caption with blur/fade/slide animation
+- Build verified successfully
+
+Stage Summary:
+- All 6 reciters now verified working on CDN (200 OK for ayahs 1 and 6000)
+- Double-play bug fixed: trackIndexRef properly incremented in both onended handlers
+- Caption animation added: shows current ayah text with language selection (Arabic default)
+- Error handling improved: audio failures auto-skip to next verse with toast notification
+

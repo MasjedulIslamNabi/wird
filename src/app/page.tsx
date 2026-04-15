@@ -89,6 +89,11 @@ class TabErrorBoundary extends React.Component<
 
 // ─── Types ────────────────────────────────────────────────
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 interface SurahInfo {
   number: number;
   name: string;
@@ -799,8 +804,15 @@ function calculatePrayerTimes(lat: number, lng: number, date: Date): Record<stri
     params.madhab = AdhanMadhab.Shafi;
     const pt = new AdhanPrayerTimes(coords, date, params);
 
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const fmt = (d: Date): string => {
-      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      if (isNaN(d.getTime())) return '--:--';
+      return d.toLocaleTimeString('en-US', {
+        timeZone: tz,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
     };
 
     return {
@@ -1043,8 +1055,47 @@ export default function Home() {
   const [playerMeta, setPlayerMeta] = useState<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>(null);
   const [autoPlaySurah, setAutoPlaySurah] = useState<number | null>(null);
 
+  // PWA Install Prompt
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('noor-install-dismissed') === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+      const dismissed = localStorage.getItem('noor-install-dismissed');
+      if (dismissed !== 'true') {
+        setTimeout(() => setShowInstallBanner(true), 3000);
+      }
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
   // Stable callback for auto-play consumption (prevents infinite useEffect churn)
   const onAutoPlayConsumed = useCallback(() => setAutoPlaySurah(null), []);
+
+  const handleInstall = useCallback(async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      showToast('Noor installed successfully! 🎉');
+    }
+    setInstallPrompt(null);
+    setShowInstallBanner(false);
+  }, [installPrompt, showToast]);
+
+  const dismissInstall = useCallback(() => {
+    setShowInstallBanner(false);
+    setInstallDismissed(true);
+    try { localStorage.setItem('noor-install-dismissed', 'true'); } catch {}
+  }, []);
 
   // Navigate from My Space to Listen tab with a specific surah
   const navigateToListen = useCallback((surahNumber: number) => {
@@ -1148,6 +1199,35 @@ export default function Home() {
           setGlobalPlayer={setGlobalPlayer}
           playerMeta={playerMeta}
         />
+      )}
+
+      {/* PWA Install Banner */}
+      {showInstallBanner && installPrompt && !installDismissed && (
+        <div className="fixed bottom-16 left-0 right-0 z-50 p-3 safe-area-bottom install-banner-animate">
+          <div className="max-w-lg mx-auto bg-white dark:bg-[#162118] rounded-2xl shadow-xl border border-[#E5E1D8] dark:border-[#2D3E34] p-4 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">🌙</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Install Noor</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] truncate">Add to home screen for the best experience</p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={dismissInstall}
+                className="px-3 py-2 text-xs text-[#6B7280] dark:text-[#9CA3AF] rounded-lg hover:bg-[#F0EDE4] dark:hover:bg-[#1E2E24]"
+              >
+                Later
+              </button>
+              <button
+                onClick={handleInstall}
+                className="px-4 py-2 text-xs font-semibold bg-[#0D4B3C] text-white rounded-lg hover:bg-[#0D4B3C]/90 active:scale-95 transition-all"
+              >
+                Install
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bottom Navigation (Mobile) */}
@@ -1259,8 +1339,8 @@ function MobileBottomNav({
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#162118]/95 backdrop-blur-md border-t border-[#E5E1D8] dark:border-[#2D3E34] safe-area-pb">
-      <div className="flex items-center justify-around h-16">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-[#162118] border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+      <div className="flex items-center justify-around h-16 safe-area-bottom">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1271,7 +1351,7 @@ function MobileBottomNav({
                 setActiveTab(tab.id);
                 if (tab.id === 'quran') setSelectedSurah(null);
               }}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[3.5rem] ${
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[3.5rem] min-h-[44px] ${
                 isActive
                   ? 'text-[#0D4B3C] dark:text-[#C8A951]'
                   : 'text-[#6B7280] dark:text-[#9CA3AF]'
@@ -4000,6 +4080,12 @@ function DailyMotivation({
     } catch {}
     return null;
   });
+  const [locationName, setLocationName] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem('noor-location-name');
+    } catch { return null; }
+  });
   const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -4021,6 +4107,18 @@ function DailyMotivation({
           setLocation(loc);
           setLocationDenied(false);
           try { localStorage.setItem('noor-location', JSON.stringify(loc)); } catch {}
+          // Reverse geocode to get location name
+          (async () => {
+            try {
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10&accept-language=en`);
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
+                setLocationName(name);
+                try { localStorage.setItem('noor-location-name', name); } catch {}
+              }
+            } catch {}
+          })();
         },
         () => {
           const mecca = { lat: 21.4225, lng: 39.8262 };
@@ -4037,7 +4135,9 @@ function DailyMotivation({
 
   const refreshLocation = useCallback(() => {
     try { localStorage.removeItem('noor-location'); } catch {}
+    try { localStorage.removeItem('noor-location-name'); } catch {}
     setLocation(null);
+    setLocationName(null);
     setPrayerTimes(null);
     setLocationDenied(false);
   }, []);
@@ -4174,13 +4274,11 @@ function DailyMotivation({
                 <h3 className="text-sm font-bold text-white">Prayer Times</h3>
                 <p className="text-[10px] text-[#C8A951]/80">
                   {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <span className="text-[#C8A951]/60 ml-1">📍 {locationName || (locationDenied ? 'Makkah (default)' : '...')}</span>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {locationDenied && (
-                <span className="text-[9px] text-[#C8A951]/60 max-w-[100px] truncate hidden sm:inline">Default: Makkah</span>
-              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -4233,7 +4331,12 @@ function DailyMotivation({
             )}
             {locationDenied && prayerTimes && (
               <p className="text-[10px] text-[#9CA3AF] text-center mt-2">
-                Using default location (Makkah). Tap <MapPin className="w-2.5 h-2.5 inline" /> to refresh.
+                Using default location (Makkah). Tap <MapPin className="w-2.5 h-2.5 inline" /> to detect your location.
+              </p>
+            )}
+            {!locationDenied && locationName && prayerTimes && (
+              <p className="text-[10px] text-[#9CA3AF] text-center mt-2">
+                Times for {locationName} · {Intl.DateTimeFormat().resolvedOptions().timeZone}
               </p>
             )}
           </CardContent>
@@ -4738,6 +4841,19 @@ function SettingsView({
         <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Settings</h2>
         <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Customize your reading experience</p>
       </div>
+
+      {/* Install App */}
+      <Card className="border border-[#C8A951]/30 bg-[#C8A951]/5">
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-[#0D4B3C] flex items-center justify-center flex-shrink-0">
+            <span className="text-lg">📱</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Install Noor App</p>
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Add to home screen for quick access, or use your browser's menu → &quot;Add to Home Screen&quot; or &quot;Install App&quot;</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Theme */}
       <Card>

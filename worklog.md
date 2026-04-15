@@ -152,3 +152,34 @@ Stage Summary:
 - 8 situation categories with 20+ curated duas for emotional/spiritual support
 - Prayer times calculated offline with geolocation
 - Build verified: compiles successfully
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Mobile-first PWA optimization — fix prayer times, make installable, mobile UX
+
+Work Log:
+- Read worklog and all target files (page.tsx 5310 lines, globals.css, layout.tsx, manifest.json, sw.js)
+- Updated globals.css: Added mobile-first CSS block (60 lines) — safe-area-inset utilities, tap highlight removal, overscroll-behavior, install-banner animation, standalone mode media query, smooth scrolling on hover:none
+- Updated layout.tsx: Added 4 meta tags — apple-mobile-web-app-title, mobile-web-app-capable, application-name, msapplication-TileColor
+- Updated manifest.json: Full rewrite — added categories, lang, dir, prefer_related_applications, proper icon purposes (any vs maskable), shortcuts (Read Quran, Listen, Duas), background_color #FBF7F0, screenshots placeholder
+- Updated sw.js: Bumped cache names from noor-v1 to noor-v2 (both main and audio caches) to force fresh cache on users
+- Updated page.tsx with 7 targeted edits:
+  A. Added BeforeInstallPromptEvent interface in Types section
+  B. Added PWA install state (installPrompt, showInstallBanner, installDismissed) + useEffect for beforeinstallprompt event in Home component
+  C. Added handleInstall and dismissInstall callbacks in Home component
+  D. Added PWA install banner JSX (fixed bottom-16, slideUp animation, Install/Later buttons) before MobileBottomNav
+  E. Fixed calculatePrayerTimes: explicit timeZone parameter via Intl.DateTimeFormat().resolvedOptions().timeZone, added NaN check for invalid dates
+  F. Added locationName state with localStorage cache + reverse geocoding via Nominatim API in geolocation success callback, updated prayer times header to show "📍 {city}" or "📍 Makkah (default)", added timezone display line below prayer grid
+  G. Updated MobileBottomNav: removed backdrop-blur, added safe-area-bottom class to inner div, added min-h-[44px] for touch targets
+  H. Added Install App card to SettingsView with instructions
+- Verified: dev server compiles successfully, GET / returns 200, no new lint errors (3 pre-existing errors remain)
+
+Stage Summary:
+- PWA installable with animated install banner (appears after 3s, dismissible, stored in localStorage)
+- Prayer times now show detected city name + timezone for transparency
+- calculatePrayerTimes uses explicit timeZone to avoid UTC/display mismatch
+- Mobile-first CSS: safe-area insets, no tap highlight, overscroll containment
+- Service worker cache busted to v2 for fresh content delivery
+- Manifest improved with shortcuts, maskable icons, categories
+- Settings page includes install instructions card

@@ -1,28 +1,59 @@
 {
-  "name": "Noor - Quran Reader & Daily Motivation",
+  "name": "Noor — Quran & Daily Motivation",
   "short_name": "Noor",
-  "description": "A beautiful Islamic Faith-Tech application featuring a Quran Reader with translation, listening mode, daily duas, and spiritual motivation.",
+  "description": "A beautiful Islamic app for reading Quran, listening to recitations, daily duas, prayer times, and spiritual motivation.",
   "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0D4B3C",
-  "theme_color": "#0D4B3C",
-  "orientation": "portrait-primary",
   "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FBF7F0",
+  "theme_color": "#0D4B3C",
+  "categories": ["education", "lifestyle", "spirituality"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["education", "lifestyle", "spirituality"],
-  "lang": "en",
-  "dir": "ltr"
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Read Quran",
+      "short_name": "Quran",
+      "description": "Start reading the Quran",
+      "url": "/?tab=quran",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Listen",
+      "short_name": "Listen",
+      "description": "Listen to Quran recitation",
+      "url": "/?tab=listen",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily Duas",
+      "short_name": "Duas",
+      "description": "Browse daily duas",
+      "url": "/?tab=duas",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

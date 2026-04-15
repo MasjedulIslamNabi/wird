@@ -263,3 +263,63 @@
   background: rgba(200, 169, 81, 0.15);
   border-color: rgba(200, 169, 81, 0.25);
 }
+
+/* ─── Mobile-first & PWA optimizations ─── */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overscroll-behavior-y: contain;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Safe area insets for notched phones */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-pb {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+/* Smooth scrolling for mobile */
+@media (hover: none) {
+  * {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Remove blue highlight on tap */
+button, a, input, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent text selection on interactive elements */
+button, nav, [role="tab"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Install banner animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.install-banner-animate {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Standalone mode adjustments (when installed as PWA) */
+@media (display-mode: standalone) {
+  .hide-in-standalone {
+    display: none !important;
+  }
+}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Coordinates as AdhanCoordinates, PrayerTimes as AdhanPrayerTimes, CalculationMethod as AdhanCalculationMethod, Madhab as AdhanMadhab } from 'adhan';
 import {
   Moon,
   Sun,
@@ -792,52 +793,27 @@ const SITUATION_DUAS: SituationDua[] = [
 // ─── Prayer Time Calculation ───────────────────────────
 
 function calculatePrayerTimes(lat: number, lng: number, date: Date): Record<string, string> {
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-  const declination = -23.45 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
-  const B = (360 / 365) * (dayOfYear - 81) * (Math.PI / 180);
-  const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-  const timezone = -date.getTimezoneOffset() / 60;
-  const lngOffset = lng / 15;
-  const noon = 12 - timezone + lngOffset - EoT / 60;
-  const latRad = lat * Math.PI / 180;
-  const decRad = declination * Math.PI / 180;
+  try {
+    const coords = new AdhanCoordinates(lat, lng);
+    const params = AdhanCalculationMethod.MuslimWorldLeague();
+    params.madhab = AdhanMadhab.Shafi;
+    const pt = new AdhanPrayerTimes(coords, date, params);
 
-  const haToTime = (angle: number): number | null => {
-    const cosH = (Math.sin(angle * Math.PI / 180) - Math.sin(latRad) * Math.sin(decRad)) / (Math.cos(latRad) * Math.cos(decRad));
-    if (cosH > 1 || cosH < -1) return null;
-    const H = (Math.acos(cosH) * 180 / Math.PI) / 15;
-    return H;
-  };
+    const fmt = (d: Date): string => {
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
 
-  const formatTime = (hours: number | null): string => {
-    if (hours === null) return '--:--';
-    const totalMinutes = Math.round(hours * 60);
-    let h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
-  };
-
-  const fajrAngle = -18;
-  const ishaAngle = -17;
-  const sunriseAngle = -0.833;
-
-  const fajrH = haToTime(fajrAngle);
-  const sunriseH = haToTime(sunriseAngle);
-  const asrAngle = Math.atan(1 / (1 + Math.tan(Math.abs(latRad - decRad)))) * 180 / Math.PI;
-  const asrH = haToTime(asrAngle);
-  const maghribH = haToTime(sunriseAngle);
-  const ishaH = haToTime(ishaAngle);
-
-  return {
-    Fajr: formatTime(noon - (fajrH ?? 6)),
-    Sunrise: formatTime(noon - (sunriseH ?? 6)),
-    Dhuhr: formatTime(noon),
-    Asr: formatTime(noon + (asrH ?? 4)),
-    Maghrib: formatTime(noon + (maghribH ?? 6)),
-    Isha: formatTime(noon + (ishaH ?? 6)),
-  };
+    return {
+      Fajr: fmt(pt.fajr),
+      Sunrise: fmt(pt.sunrise),
+      Dhuhr: fmt(pt.dhuhr),
+      Asr: fmt(pt.asr),
+      Maghrib: fmt(pt.maghrib),
+      Isha: fmt(pt.isha),
+    };
+  } catch {
+    return { Fajr: '--:--', Sunrise: '--:--', Dhuhr: '--:--', Asr: '--:--', Maghrib: '--:--', Isha: '--:--' };
+  }
 }
 
 function getNextPrayer(prayerTimes: Record<string, string>): string | null {

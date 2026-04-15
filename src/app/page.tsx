@@ -34,6 +34,7 @@ import {
   Square,
   ListMusic,
   Repeat,
+  HandHeart,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -246,6 +247,268 @@ const RECITERS = [
   { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', shortName: 'Hudhaify' },
 ];
 
+// ─── Daily Dua Collection ────────────────────────────────
+
+interface DuaItem {
+  id: string;
+  title: string;
+  titleAr: string;
+  arabic: string;
+  english: string;
+  bangla: string;
+  reference: string;
+  category: 'morning' | 'evening' | 'sleep' | 'prayer' | 'after-eating' | 'travel' | 'gratitude' | 'forgiveness';
+}
+
+const DUA_CATEGORIES = [
+  { id: 'morning' as const, label: 'Morning', labelAr: 'صباح', icon: '🌅', color: '#F59E0B' },
+  { id: 'evening' as const, label: 'Evening', labelAr: 'مساء', icon: '🌆', color: '#8B5CF6' },
+  { id: 'prayer' as const, label: 'After Prayer', labelAr: 'بعد الصلاة', icon: '🕌', color: '#0D4B3C' },
+  { id: 'sleep' as const, label: 'Before Sleep', labelAr: 'قبل النوم', icon: '🌙', color: '#1E3A5F' },
+  { id: 'after-eating' as const, label: 'After Eating', labelAr: 'بعد الطعام', icon: '🍽️', color: '#059669' },
+  { id: 'travel' as const, label: 'Travel', labelAr: 'سفر', icon: '✈️', color: '#2563EB' },
+  { id: 'gratitude' as const, label: 'Gratitude', labelAr: 'شكر', icon: '💕', color: '#DC2626' },
+  { id: 'forgiveness' as const, label: 'Forgiveness', labelAr: 'استغفار', icon: '🤲', color: '#7C3AED' },
+];
+
+const BUNDLED_DUAS: DuaItem[] = [
+  // ── Morning Duas ──
+  {
+    id: 'morning-1',
+    title: 'Morning Invocation',
+    titleAr: 'أذكار الصباح',
+    arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'We have reached the morning and at this very time all sovereignty belongs to Allah, Lord of the worlds. O Allah, I ask You for the goodness of this day, its triumphs, its light, its blessings and its guidance, and I seek refuge in You from the evil that is in it and from the evil that comes after it.',
+    bangla: 'আমরা সকালে পৌঁছেছি এবং সকালে সমস্ত রাজত্ব আল্লাহর, সকল প্রশংসা আল্লাহর। আল্লাহ ছাড়া কোনো ইলাহ নেই, তিনি একক, তাঁর কোনো শরীক নেই। তাঁরই রাজত্ব, তাঁরই প্রশংসা এবং তিনি সব কিছুর উপরে ক্ষমতাবান।',
+    reference: 'Sahih Muslim 4/2088',
+    category: 'morning',
+  },
+  {
+    id: 'morning-2',
+    title: 'Protection from Harm',
+    titleAr: 'اللَّهُمَّ بِكَ أَصْبَحْنَا',
+    arabic: 'اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ',
+    english: 'O Allah, by Your leave we have reached the morning, by Your leave we have reached the evening, by Your leave we live and die, and unto You is our resurrection.',
+    bangla: 'হে আল্লাহ, তোমার রহমতে আমরা সকালে পৌঁছেছি, তোমার রহমতে সন্ধ্যায় পৌঁছেছি, তোমার রহমতে বাঁচি এবং তোমার রহমতে মারা যাই। আর তোমারই দিকে পুনরুত্থান।',
+    reference: 'Sunan At-Tirmidhi 5/466',
+    category: 'morning',
+  },
+  {
+    id: 'morning-3',
+    title: 'Morning Remembrance',
+    titleAr: 'سبحان الله وبحمده',
+    arabic: 'سُبْحَانَ اللهِ وَبِحَمْدِهِ',
+    english: 'How perfect Allah is and I praise Him.',
+    bangla: 'আল্লাহ পবিত্র এবং আমি তাঁর প্রশংসা করি।',
+    reference: 'Sahih Al-Bukhari & Muslim',
+    category: 'morning',
+  },
+  {
+    id: 'morning-4',
+    title: 'Seeking Refuge from Shaytan',
+    titleAr: 'أعوذ بكلمات الله التامات',
+    arabic: 'أَعُوذُ بِكَلِمَاتِ اللهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ',
+    english: 'I seek refuge in the perfect words of Allah from the evil of what He has created.',
+    bangla: 'আমি আল্লাহর পূর্ণ কালিমাগুলোর আশ্রয় নিচ্ছি তিনি যা সৃষ্টি করেছেন তার অনিষ্ট থেকে।',
+    reference: 'Sahih Muslim 4/2084',
+    category: 'morning',
+  },
+
+  // ── Evening Duas ──
+  {
+    id: 'evening-1',
+    title: 'Evening Invocation',
+    titleAr: 'أمسينا وأمسى الملك لله',
+    arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لاَ إِلَـهَ إِلاَّ اللهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'We have reached the evening and at this very time all sovereignty belongs to Allah, Lord of the worlds. O Allah, I ask You for the goodness of this night, its triumphs, its light, its blessings and its guidance, and I seek refuge in You from the evil that is in it and from the evil that comes after it.',
+    bangla: 'আমরা সন্ধ্যায় পৌঁছেছি এবং সন্ধ্যায় সমস্ত রাজত্ব আল্লাহর, সকল প্রশংসা আল্লাহর। আল্লাহ ছাড়া কোনো ইলাহ নেই, তিনি একক, তাঁর কোনো শরীক নেই। তাঁরই রাজত্ব, তাঁরই প্রশংসা এবং তিনি সব কিছুর উপরে ক্ষমতাবান।',
+    reference: 'Sahih Muslim 4/2088',
+    category: 'evening',
+  },
+  {
+    id: 'evening-2',
+    title: 'Evening Protection',
+    titleAr: 'اللَّهُمَّ بِكَ أَمْسَيْنَا',
+    arabic: 'اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ',
+    english: 'O Allah, by Your leave we have reached the evening, by Your leave we have reached the morning, by Your leave we live and die, and unto You is our return.',
+    bangla: 'হে আল্লাহ, তোমার রহমতে আমরা সন্ধ্যায় পৌঁছেছি, তোমার রহমতে সকালে পৌঁছেছি, তোমার রহমতে বাঁচি এবং তোমার রহমতে মারা যাই। আর তোমারই দিকে প্রত্যাবর্তন।',
+    reference: 'Sunan At-Tirmidhi 5/466',
+    category: 'evening',
+  },
+  {
+    id: 'evening-3',
+    title: 'Three Quls (Protection)',
+    titleAr: 'القل - الفلق - الناس',
+    arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ، قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ، قُلْ أَعُوذُ بِرَبِّ النَّاسِ',
+    english: 'Recite Surah Al-Ikhlas, Al-Falaq, and An-Nas three times each in the evening for protection from all harm.',
+    bangla: 'সন্ধ্যায় সূরা ইখলাস, ফালাক এবং নাস তিন তিন বার করে পড়ুন — সমস্ত অনিষ্ট থেকে সুরক্ষার জন্য।',
+    reference: 'Sunan Abu Dawud 4/322, Sunan At-Tirmidhi 5/567',
+    category: 'evening',
+  },
+
+  // ── After Prayer Duas ──
+  {
+    id: 'prayer-1',
+    title: 'Istighfar After Prayer',
+    titleAr: 'أستغفر الله',
+    arabic: 'أَسْتَغْفِرُ اللَّهَ، أَسْتَغْفِرُ اللَّهَ، أَسْتَغْفِرُ اللَّهَ',
+    english: 'I ask Allah for forgiveness (recite three times after every prayer).',
+    bangla: 'আমি আল্লাহর ক্ষমা চাই (প্রতি নামাজের পর তিনবার পড়ুন)।',
+    reference: 'Sahih Al-Bukhari & Muslim',
+    category: 'prayer',
+  },
+  {
+    id: 'prayer-2',
+    title: 'Tashahhud Dua',
+    titleAr: 'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ',
+    arabic: 'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ، وَمِنْ عَذَابِ جَهَنَّمَ، وَمِنْ فِتْنَةِ الْمَحْيَا وَالْمَمَاتِ، وَمِنْ شَرِّ فِتْنَةِ الْمَسِيحِ الدَّجَّالِ',
+    english: 'O Allah, I seek refuge in You from the punishment of the grave, from the punishment of Hellfire, from the trials of life and death, and from the evil trials of the False Messiah.',
+    bangla: 'হে আল্লাহ, আমি কবরের আযাব থেকে, জাহান্নামের আযাব থেকে, জীবন ও মৃত্যুর ফিতনা থেকে এবং দাজ্জালের ফিতনা থেকে তোমার আশ্রয় চাই।',
+    reference: 'Sahih Al-Bukhari & Muslim',
+    category: 'prayer',
+  },
+  {
+    id: 'prayer-3',
+    title: 'Dua for Guidance',
+    titleAr: 'اللَّهُمَّ اهْدِنِي',
+    arabic: 'اللَّهُمَّ اهْدِنِي وَسَدِّدْنِي',
+    english: 'O Allah, guide me and keep me on the right path.',
+    bangla: 'হে আল্লাহ, আমাকে হেদায়েত দাও এবং আমাকে সঠিক পথে অবিচল রাখো।',
+    reference: 'Sunan Muslim 2/2019',
+    category: 'prayer',
+  },
+
+  // ── Before Sleep Duas ──
+  {
+    id: 'sleep-1',
+    title: 'Sleep Dua',
+    titleAr: 'باسمك ربي وضعت جنبي',
+    arabic: 'بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا',
+    english: 'In Your name, O Allah, I die and I live.',
+    bangla: 'হে আল্লাহ, তোমার নামেই আমি মারা যাই এবং তোমার নামেই বাঁচি।',
+    reference: 'Sahih Al-Bukhari 11/113',
+    category: 'sleep',
+  },
+  {
+    id: 'sleep-2',
+    title: 'Surah Al-Mulk Before Sleep',
+    titleAr: 'سورة الملك',
+    arabic: 'تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ',
+    english: 'Recite Surah Al-Mulk before sleeping — it protects from the punishment of the grave and intercedes for the reciter until Allah forgives them.',
+    bangla: 'ঘুমানোর আগে সূরা আল-মুলক তিলাওয়াত করুন — এটি কবরের আযাব থেকে রক্ষা করে এবং আল্লাহ ক্ষমা না করা পর্যন্ত পাঠকের জন্য সুপারিশ করে।',
+    reference: 'Sunan At-Tirmidhi 5/267, Tafsir Ibn Kathir',
+    category: 'sleep',
+  },
+  {
+    id: 'sleep-3',
+    title: 'Putting Side to Rest Dua',
+    titleAr: 'باسمك ربي وضعت جنبي',
+    arabic: 'بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي، وَبِكَ أَرْفَعُهُ، فَإِنْ أَمْسَكْتَ نَفْسِي فَارْحَمْهَا، وَإِنْ أَرْسَلْتَهَا فَاحْفَظْهَا بِمَا تَحْفَظُ بِهِ عِبَادَكَ الصَّالِحِينَ',
+    english: 'In Your name, my Lord, I lay my side down, and in Your name I raise it. If You take my soul, have mercy on it, and if You return it, protect it as You protect Your righteous servants.',
+    bangla: 'হে আমার রব, তোমার নামেই আমি আমার কাত হয়ে শুয়েছি, তোমার নামেই আমি উঠি। তুমি যদি আমার প্রাণ নাও, তবে তার প্রতি দয়া করো, আর যদি ছেড়ে দাও, তবে তোমার নেক বান্দাদের যেভাবে হেফাজত করো, তার মতো হেফাজত করো।',
+    reference: 'Sahih Al-Bukhari & Muslim',
+    category: 'sleep',
+  },
+
+  // ── After Eating ──
+  {
+    id: 'eating-1',
+    title: 'After Meal Dua',
+    titleAr: 'الحمد لله الذي أطعمنا',
+    arabic: 'الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِينَ',
+    english: 'All praise is for Allah who fed us, gave us drink, and made us Muslims.',
+    bangla: 'সকল প্রশংসা আল্লাহর যিনি আমাদের খাওয়ালেন, পান করালেন এবং আমাদের মুসলিম বানিয়েছেন।',
+    reference: 'Sunan Abu Dawud 3/347, Sunan At-Tirmidhi 4/286',
+    category: 'after-eating',
+  },
+  {
+    id: 'eating-2',
+    title: 'Before Meal Dua',
+    titleAr: 'بسم الله',
+    arabic: 'بِسْمِ اللهِ وَعَلَى بَرَكَةِ اللهِ',
+    english: 'In the name of Allah and with the blessings of Allah.',
+    bangla: 'আল্লাহর নামে এবং আল্লাহর বরকতে।',
+    reference: 'Sunan Abu Dawud 3/347',
+    category: 'after-eating',
+  },
+
+  // ── Travel ──
+  {
+    id: 'travel-1',
+    title: 'Travel Dua',
+    titleAr: 'اللَّهُمَّ إِنَّا نَسْأَلُكَ فِي سَفَرِنَا',
+    arabic: 'اللَّهُمَّ إِنَّا نَسْأَلُكَ فِي سَفَرِنَا هَذَا الْبِرَّ وَالتَّقْوَى، وَمِنَ الْعَمَلِ مَا تَرْضَى',
+    english: 'O Allah, we ask You for righteousness and piety on this journey, and deeds that are pleasing to You.',
+    bangla: 'হে আল্লাহ, আমরা এই সফরে তোমার কাছে নেকি ও তাকওয়া চাই, এবং তুমি যে আমল পছন্দ করো সেই আমল চাই।',
+    reference: 'Sahih Muslim 2/978',
+    category: 'travel',
+  },
+  {
+    id: 'travel-2',
+    title: 'Mounting Dua',
+    titleAr: 'سبحان الذي سخر لنا',
+    arabic: 'سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ وَإِنَّا إِلَىٰ رَبِّنَا لَمُنقَلِبُونَ',
+    english: 'Glory be to the One who has subjugated this for us, for we could not have done it on our own. Indeed, to our Lord we will all return.',
+    bangla: 'পবিত্র তিনি যিনি এটিকে আমাদের জন্য বশীভূত করেছেন, আমরা একাকী এটি নিয়ন্ত্রণ করতে পারতাম না। নিশ্চয়ই আমরা আমাদের রবের দিকে প্রত্যাবর্তন করব।',
+    reference: 'Surah Az-Zukhruf 43:13-14',
+    category: 'travel',
+  },
+
+  // ── Gratitude ──
+  {
+    id: 'gratitude-1',
+    title: 'Shukr (Gratitude)',
+    titleAr: 'اللَّهُمَّ لَكَ الْحَمْدُ',
+    arabic: 'اللَّهُمَّ لَكَ الْحَمْدُ أَنْتَ نُورُ السَّمَاوَاتِ وَالْأَرْضِ وَمَنْ فِيهِنَّ',
+    english: 'O Allah, all praise is Yours. You are the Light of the heavens and the earth and all that is in them.',
+    bangla: 'হে আল্লাহ, সকল প্রশংসা তোমারই। তুমি আসমান ও যমীন এবং তাদের মধ্যে যা আছে তার আলো।',
+    reference: 'Sahih Al-Bukhari & Muslim',
+    category: 'gratitude',
+  },
+  {
+    id: 'gratitude-2',
+    title: 'Thankfulness Dua',
+    titleAr: 'رَبِّ أَوْزِعْنِي',
+    arabic: 'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَىٰ وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ',
+    english: 'My Lord, inspire me to be thankful for Your blessings which You have blessed me and my parents with, and to do righteous deeds that please You.',
+    bangla: 'হে আমার রব, তুমি আমাকে তোমার নিয়ামতের শুকরিয়া আদায় করার তাওফিক দাও যা তুমি আমাকে ও আমার পিতা-মাতাকে দিয়েছো, এবং আমাকে এমন সৎকর্ম করার তাওফিক দাও যা তুমি পছন্দ করো।',
+    reference: 'Surah An-Naml 27:19',
+    category: 'gratitude',
+  },
+
+  // ── Forgiveness ──
+  {
+    id: 'forgiveness-1',
+    title: 'Sayyidul Istighfar',
+    titleAr: 'سيد الاستغفار',
+    arabic: 'اللَّهُمَّ أَنْتَ رَبِّي لاَ إِلَـهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لاَ يَغْفِرُ الذُّنُوبَ إِلاَّ أَنْتَ',
+    english: 'O Allah, You are my Lord, there is no god but You. You created me and I am Your servant. I am upon Your covenant and promise as much as I am able. I seek refuge in You from the evil of what I have done. I acknowledge Your blessings upon me and I acknowledge my sins, so forgive me, for indeed none can forgive sins except You.',
+    bangla: 'হে আল্লাহ, তুমিই আমার রব, তুমি ছাড়া কোনো ইলাহ নেই। তুমি আমাকে সৃষ্টি করেছো এবং আমি তোমার বান্দা। আমি তোমার অঙ্গীকার ও প্রতিশ্রুতির উপর যথাসাধ্য রয়েছি। আমি আমার কৃতকর্মের অনিষ্ট থেকে তোমার আশ্রয় চাই। আমি তোমার আমার প্রতি অনুগ্রহকে স্বীকার করি এবং আমার পাপকেও স্বীকার করি, অতএব আমাকে ক্ষমা করো, কারণ পাপ ক্ষমা করার ক্ষমতা তোমার ছাড়া কারো নেই।',
+    reference: 'Sahih Al-Bukhari 8/84, Sunan At-Tirmidhi 5/529',
+    category: 'forgiveness',
+  },
+  {
+    id: 'forgiveness-2',
+    title: 'Istighfar',
+    titleAr: 'رب اغفر لي وتب عليّ',
+    arabic: 'رَبِّ اغْفِرْ لِي وَتُبْ عَلَيَّ إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ',
+    english: 'My Lord, forgive me and accept my repentance, for indeed You are the Accepting of Repentance, the Merciful.',
+    bangla: 'হে আমার রব, আমাকে ক্ষমা করো এবং আমার তওবা কবুল করো, নিশ্চয়ই তুমি তওবা কবুলকারী, দয়ালু।',
+    reference: 'Surah An-Nasaa 110:3, Sunan Abu Dawud 2/86',
+    category: 'forgiveness',
+  },
+  {
+    id: 'forgiveness-3',
+    title: 'Constant Istighfar',
+    titleAr: 'استغفر الله العظيم',
+    arabic: 'أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لاَ إِلَهَ إِلاَّ هُوَ الْحَيُّ الْقَيُّومُ وَأَتُوبُ إِلَيْهِ',
+    english: 'I seek the forgiveness of Allah, the Magnificent, besides whom there is no deity, the Ever-Living, the Sustainer of existence, and I repent to Him.',
+    bangla: 'আমি মহান আল্লাহর ক্ষমা চাই, যিনি ছাড়া কোনো ইলাহ নেই, চিরঞ্জীব, সমস্ত সৃষ্টির পালনকর্তা, এবং আমি তাঁর দিকে তওবা করি।',
+    reference: 'Sunan Abu Dawud 2/87, Sunan At-Tirmidhi 5/450',
+    category: 'forgiveness',
+  },
+];
+
 // ─── Islamic Name Correction ─────────────────────────────
 // Replaces Biblical/Christian names with proper Islamic names in translations
 
@@ -356,7 +619,7 @@ function useToast() {
 // ─── Main Page Component ──────────────────────────────────
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings'>('quran');
+  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings'>('quran');
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -520,6 +783,11 @@ export default function Home() {
                 />
               </TabErrorBoundary>
             )}
+            {activeTab === 'duas' && (
+              <TabErrorBoundary>
+                <DuaCollection showToast={showToast} />
+              </TabErrorBoundary>
+            )}
             {activeTab === 'bookmarks' && (
               <TabErrorBoundary>
                 <BookmarksView
@@ -571,7 +839,7 @@ function IslamicHeader({
   toggleTheme,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings') => void;
   setSelectedSurah: (n: number | null) => void;
   isDark: boolean;
   toggleTheme: () => void;
@@ -580,6 +848,7 @@ function IslamicHeader({
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
+    { id: 'duas' as const, label: 'Duas', icon: HandHeart },
     { id: 'bookmarks' as const, label: 'Bookmarks', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -650,13 +919,14 @@ function MobileBottomNav({
   setSelectedSurah,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings') => void;
   setSelectedSurah: (n: number | null) => void;
 }) {
   const tabs = [
     { id: 'quran' as const, label: 'Quran', icon: BookOpen },
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
+    { id: 'duas' as const, label: 'Duas', icon: HandHeart },
     { id: 'bookmarks' as const, label: 'Saved', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -3871,6 +4141,285 @@ function SettingsView({
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ─── Dua Collection ──────────────────────────────────────
+
+function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
+  const [activeCategory, setActiveCategory] = useState<DuaItem['category']>('morning');
+  const [selectedDua, setSelectedDua] = useState<DuaItem | null>(null);
+  const [captionLanguage, setCaptionLanguage] = useState<'arabic' | 'english' | 'bangla'>('arabic');
+  const [copied, setCopied] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredDuas = useMemo(() => {
+    let duas = BUNDLED_DUAS.filter((d) => d.category === activeCategory);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      duas = BUNDLED_DUAS.filter(
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.arabic.includes(q) ||
+          d.english.toLowerCase().includes(q) ||
+          d.bangla.includes(q) ||
+          d.reference.toLowerCase().includes(q)
+      );
+    }
+    return duas;
+  }, [activeCategory, search]);
+
+  const copyDua = useCallback(
+    (dua: DuaItem) => {
+      const text = `${dua.arabic}\n\n${dua.english}\n\n${dua.bangla}\n\n— ${dua.reference}`;
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        showToast('Dua copied to clipboard');
+        setTimeout(() => setCopied(false), 2000);
+      });
+    },
+    [showToast]
+  );
+
+  // Category view
+  if (!selectedDua) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[#C8A951]/20 to-[#C8A951]/5 dark:from-[#C8A951]/20 dark:to-[#C8A951]/5 flex items-center justify-center shadow-lg">
+              <HandHeart className="w-8 h-8 text-[#C8A951]" />
+            </div>
+            <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Daily Duas</h2>
+            <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Essential supplications for every moment of your day</p>
+          </motion.div>
+        </div>
+
+        {/* Search */}
+        <Card className="mb-4 overflow-hidden">
+          <CardContent className="p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+              <input
+                type="text"
+                placeholder="Search duas..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-[#F8F6F0] dark:bg-[#0F1A14] border border-[#E5E1D8] dark:border-[#2D3E34] rounded-xl text-[#1A1A2E] dark:text-[#E8E0D0] placeholder-[#9CA3AF]/60 focus:outline-none focus:ring-2 focus:ring-[#C8A951]/30 transition-all"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280]">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Category Grid */}
+        {!search && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            {DUA_CATEGORIES.map((cat) => {
+              const count = BUNDLED_DUAS.filter((d) => d.category === cat.id).length;
+              return (
+                <motion.button
+                  key={cat.id}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 overflow-hidden ${
+                    activeCategory === cat.id
+                      ? 'border-[#C8A951] bg-[#C8A951]/5 dark:bg-[#C8A951]/10'
+                      : 'border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951]/40'
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{cat.icon}</div>
+                  <p className="text-xs font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">{cat.label}</p>
+                  <p className="font-arabic text-[10px] text-[#9CA3AF]">{cat.labelAr}</p>
+                  <Badge variant="secondary" className="absolute top-2 right-2 text-[9px] h-5 min-w-5 flex items-center justify-center px-1">
+                    {count}
+                  </Badge>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Dua List */}
+        {search && <p className="text-xs text-[#9CA3AF] mb-3">{filteredDuas.length} dua{filteredDuas.length !== 1 ? 's' : ''} found</p>}
+
+        <div className="space-y-3">
+          {filteredDuas.map((dua, index) => (
+            <motion.div
+              key={dua.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200 border border-[#E5E1D8] dark:border-[#2D3E34]"
+                onClick={() => {
+                  setSelectedDua(dua);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="verse-badge text-[10px]">{DUA_CATEGORIES.find((c) => c.id === dua.category)?.icon}</div>
+                        <h3 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951] truncate">{dua.title}</h3>
+                      </div>
+                      <p dir="rtl" lang="ar" className="font-arabic text-sm text-[#0D4B3C]/70 dark:text-[#C8A951]/70 truncate">
+                        {dua.arabic}
+                      </p>
+                      <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1.5 line-clamp-1">{dua.english}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#9CA3AF] flex-shrink-0 mt-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+          {filteredDuas.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm text-[#9CA3AF]">No duas found</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Single dua view
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* Back button */}
+      <button
+        onClick={() => {
+          setSelectedDua(null);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        className="flex items-center gap-1.5 text-sm text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0D4B3C] dark:hover:text-[#C8A951] transition-colors mb-4"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Back to Duas
+      </button>
+
+      {/* Category Badge */}
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <span className="text-xl">{DUA_CATEGORIES.find((c) => c.id === selectedDua.category)?.icon}</span>
+        <span className="text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF]">
+          {DUA_CATEGORIES.find((c) => c.id === selectedDua.category)?.label}
+        </span>
+      </div>
+
+      {/* Dua Card */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="overflow-hidden border-2 border-[#C8A951]/20 shadow-lg mb-4">
+          <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+          <CardContent className="p-6">
+            {/* Title */}
+            <h2 className="text-lg font-bold text-[#0D4B3C] dark:text-[#C8A951] text-center mb-1">{selectedDua.title}</h2>
+            <p dir="rtl" lang="ar" className="font-arabic text-sm text-[#9CA3AF] text-center mb-5">{selectedDua.titleAr}</p>
+
+            {/* Language Selector */}
+            <div className="flex items-center justify-center gap-1.5 mb-5">
+              <Globe className="w-3.5 h-3.5 text-[#C8A951] mr-1" />
+              {(['arabic', 'english', 'bangla'] as const).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setCaptionLanguage(lang)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    captionLanguage === lang
+                      ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C] shadow-sm'
+                      : 'bg-[#E5E1D8]/50 dark:bg-[#2D3E34]/50 text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                  }`}
+                >
+                  {lang === 'arabic' ? 'عربي' : lang === 'english' ? 'English' : 'বাংলা'}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={captionLanguage}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+                className="min-h-[120px] flex items-center justify-center"
+              >
+                {captionLanguage === 'arabic' ? (
+                  <div dir="rtl" lang="ar" className="text-center w-full px-2">
+                    <p className="font-arabic text-2xl text-[#0D4B3C] dark:text-[#E8E0D0] leading-[2.2]">{selectedDua.arabic}</p>
+                  </div>
+                ) : captionLanguage === 'english' ? (
+                  <p className="text-base text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed italic text-center px-2">
+                    &ldquo;{selectedDua.english}&rdquo;
+                  </p>
+                ) : (
+                  <p className="text-base text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed text-center px-2">{selectedDua.bangla}</p>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Reference */}
+            <div className="mt-6 pt-4 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+              <p className="text-[11px] text-[#9CA3AF] dark:text-[#6B7280] text-center">
+                Reference: <span className="font-medium text-[#C8A951]">{selectedDua.reference}</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* All Languages Preview */}
+      <Card className="overflow-hidden mb-4 border border-[#E5E1D8] dark:border-[#2D3E34]">
+        <CardContent className="p-5">
+          <h3 className="text-xs font-semibold text-[#0D4B3C] dark:text-[#C8A951] mb-3 uppercase tracking-wider">Full Translation</h3>
+          <div dir="rtl" lang="ar" className="mb-4">
+            <p className="text-[10px] text-[#9CA3AF] mb-1 text-left">Arabic</p>
+            <p className="font-arabic text-lg text-[#0D4B3C] dark:text-[#E8E0D0] leading-[2]">{selectedDua.arabic}</p>
+          </div>
+          <Separator className="my-3" />
+          <div className="mb-4">
+            <p className="text-[10px] text-[#9CA3AF] mb-1">English</p>
+            <p className="text-sm text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed">{selectedDua.english}</p>
+          </div>
+          <Separator className="my-3" />
+          <div>
+            <p className="text-[10px] text-[#9CA3AF] mb-1">বাংলা</p>
+            <p className="text-sm text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed">{selectedDua.bangla}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          onClick={() => copyDua(selectedDua)}
+          className="flex-1 gap-2 border-[#C8A951]/30 text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#C8A951]/5"
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? 'Copied!' : 'Copy Dua'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setSelectedDua(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="flex-1 gap-2 border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF]"
+        >
+          <ListMusic className="w-4 h-4" />
+          Browse All
+        </Button>
+      </div>
     </div>
   );
 }

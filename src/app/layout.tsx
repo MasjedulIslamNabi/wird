@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,26 +16,38 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Noor — Quran Reader & Daily Motivation",
   description:
-    "A beautiful Islamic Faith-Tech application featuring a Quran Reader with word-for-word translation and daily spiritual motivation.",
+    "A beautiful Islamic Faith-Tech application featuring a Quran Reader with word-for-word translation, listening mode, daily duas, and spiritual motivation.",
   keywords: [
     "Quran",
     "Islam",
     "Noor",
     "Quran Reader",
-    "Daily Motivation",
+    "Daily Dua",
     "Arabic",
     "Translation",
+    "Listening",
+    "Offline Quran",
   ],
   authors: [{ name: "Noor App" }],
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌙</text></svg>",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Noor — Quran Reader & Daily Motivation",
     description:
-      "A beautiful Islamic Faith-Tech application for reading the Quran with word-for-word translation.",
+      "A beautiful Islamic Faith-Tech application for reading the Quran with word-for-word translation, listening, and daily duas.",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0D4B3C",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -50,6 +62,20 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap"
           rel="stylesheet"
+        />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
         />
       </head>
       <body

@@ -84,3 +84,71 @@ Stage Summary:
 - 22 authentic duas with proper references
 - Trilingual: Arabic, English, Bangla
 - Search, copy, and category filtering features
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Implement TTS Recitation, Situation-Based Duas, and Prayer Times
+
+Work Log:
+- Added imports: MapPin, Clock from lucide-react (lines 38-39)
+- Added SITUATION_DUAS data structure (8 situations × 2-3 duas each) after line 512:
+  - Hard Times / Difficulty (😔) — 3 duas
+  - Anxiety & Worry (😰) — 3 duas
+  - Seeking Guidance (🤲) — 2 duas (Istikhara, Rabbi Zidni Ilma)
+  - Before Important Task (💪) — 2 duas
+  - After Loss (💔) — 2 duas
+  - Gratitude (🌟) — 3 duas (2 from BUNDLED_DUAS + 1 new)
+  - Seeking Forgiveness (🤲) — 3 duas (all from BUNDLED_DUAS)
+  - Before Sleep (🌙) — 3 duas (all from BUNDLED_DUAS)
+- Added calculatePrayerTimes() function (pure math, offline)
+- Added getNextPrayer() helper to highlight next upcoming prayer
+- Modified DailyMotivation component:
+  - Added prayer time state + geolocation + caching in localStorage
+  - Added prayer times widget at TOP of My Space (before MoodQuiz)
+  - 3×2 grid with Fajr/Sunrise/Dhuhr/Asr/Maghrib/Isha
+  - Highlights NEXT upcoming prayer with gold accent + "NEXT" badge
+  - Shows current time, location denied fallback to Makkah
+  - Refresh location button
+  - Added Situation Duas section after hadiths ("Duas for Your Moment")
+  - Horizontally scrollable situation cards
+  - Expandable dua cards with TTS play buttons (Arabic/English/Bangla)
+  - Copy button for each dua
+- Modified DuaCollection component:
+  - Added TTS state (isSpeaking, speakingLang, speechRate)
+  - Added speakDua() with Web Speech API + voice matching
+  - Added stopSpeaking() + cleanup on unmount
+  - Added play/pause button in LIST view (small icon with pulsing indicator)
+  - Added prominent play controls in SINGLE DUA view (3 language buttons)
+  - Added speaking visual indicator (3 pulsing green dots)
+  - Added rate control (0.7x Learning / 1x Normal)
+  - Stop speech on back navigation and dua switch
+- Build verified: `npx next build` passes cleanly
+
+Stage Summary:
+- File grew from 4426 to ~5316 lines
+- 3 major features implemented in single page.tsx file
+- All TTS uses Web Speech API (works offline once voice downloaded)
+- Prayer times calculated offline with geolocation caching
+- 8 situation-based dua categories with 20+ duas
+- Build passes: Next.js 16.1.3 Turbopack, 0 errors
+
+---
+Task ID: 3
+Agent: full-stack-developer
+Task: Add dua recitation, situation-based duas, and prayer times
+
+Work Log:
+- Added Web Speech API TTS to DuaCollection: play/pause Arabic/English/Bangla, rate control (0.7x/1x), voice matching, cleanup on unmount
+- Added TTS play buttons to both list view (small icon) and single dua view (prominent 3-language buttons)
+- Created SITUATION_DUAS data: 8 situations (Hard Times, Anxiety, Seeking Guidance, Before Important Task, After Loss, Gratitude, Forgiveness, Before Sleep) with 2-3 duas each
+- Added "Duas for Your Moment" section in DailyMotivation: scrollable situation cards, expandable dua list with TTS and copy
+- Implemented calculatePrayerTimes() pure math function: solar declination, equation of time, hour angles for Fajr/Sunrise/Dhuhr/Asr/Maghrib/Isha
+- Added geolocation-based prayer times widget in My Space: cached location, auto-detect, fallback to Makkah, next prayer highlight, 60s refresh
+- All features work offline (TTS, math-based prayer times, cached data)
+
+Stage Summary:
+- Duas are now recitable with TTS in 3 languages
+- 8 situation categories with 20+ curated duas for emotional/spiritual support
+- Prayer times calculated offline with geolocation
+- Build verified: compiles successfully

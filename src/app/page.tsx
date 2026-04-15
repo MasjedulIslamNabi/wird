@@ -35,6 +35,8 @@ import {
   ListMusic,
   Repeat,
   HandHeart,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -508,6 +510,355 @@ const BUNDLED_DUAS: DuaItem[] = [
     category: 'forgiveness',
   },
 ];
+
+// ─── Situation-Based Duas ───────────────────────────────
+
+interface SituationDua {
+  situation: string;
+  emoji: string;
+  description: string;
+  duas: DuaItem[];
+}
+
+const SITUATION_DUAS: SituationDua[] = [
+  {
+    situation: 'Hard Times',
+    emoji: '😔',
+    description: 'When life feels overwhelming',
+    duas: [
+      {
+        id: 'sit-hard-1',
+        title: 'Dua for Distress',
+        titleAr: 'دعاء الهم والغم',
+        arabic: 'لَا إِلَـهَ إِلَّا اللَّهُ الْعَظِيمُ الْحَلِيمُ، لَا إِلَـهَ إِلَّا اللَّهُ رَبُّ الْعَرْشِ الْعَظِيمِ، لَا إِلَـهَ إِلَّا اللَّهُ رَبُّ السَّمَاوَاتِ وَرَبُّ الْأَرْضِ وَرَبُّ الْعَرْشِ الْكَرِيمِ',
+        english: 'There is no deity except Allah, the Magnificent, the Forbearing. There is no deity except Allah, Lord of the magnificent Throne. There is no deity except Allah, Lord of the heavens and Lord of the earth and Lord of the noble Throne.',
+        bangla: 'মহান, সহনশীল আল্লাহ ছাড়া কোনো ইলাহ নেই। মহান আরশের রব আল্লাহ ছাড়া কোনো ইলাহ নেই। আসমান ও যমীনের রব এবং সম্মানিত আরশের রব আল্লাহ ছাড়া কোনো ইলাহ নেই।',
+        reference: 'Sahih Al-Bukhari & Muslim',
+        category: 'morning',
+      },
+      {
+        id: 'sit-hard-2',
+        title: 'Hasbunallahu',
+        titleAr: 'حسبنا الله ونعم الوكيل',
+        arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+        english: 'Allah is sufficient for us, and He is the best Disposer of affairs.',
+        bangla: 'আমাদের জন্য আল্লাহই যথেষ্ট এবং তিনি সর্বোত্তম অভিভাবক।',
+        reference: 'Surah Al-Imran 3:173',
+        category: 'morning',
+      },
+      {
+        id: 'sit-hard-3',
+        title: 'Dua for Ease After Hardship',
+        titleAr: 'دعاء الفرج',
+        arabic: 'اللَّهُمَّ إِنِّي عَبْدُكَ، ابْنُ عَبْدِكَ، ابْنُ أَمَتِكَ، نَاصِيَتِي بِيَدِكَ، مَاضٍ فِيَّ حُكْمُكَ، عَدْلٌ فِيَّ قَضَاؤُكَ',
+        english: 'O Allah, I am Your servant, son of Your servant, son of Your maidservant. My forelock is in Your hand. Your command over me is forever executed and Your decree over me is just.',
+        bangla: 'হে আল্লাহ, আমি তোমার বান্দা, তোমার বান্দার পুত্র, তোমার দাসীর পুত্র। আমার চুল তোমার হাতে। তোমার আদেশ আমার উপর চিরকাল কার্যকর এবং তোমার ফয়সালা আমার বেলায় ন্যায্য।',
+        reference: 'Musnad Ahmad',
+        category: 'morning',
+      },
+    ],
+  },
+  {
+    situation: 'Anxiety & Worry',
+    emoji: '😰',
+    description: 'When you feel anxious or worried',
+    duas: [
+      {
+        id: 'sit-anxiety-1',
+        title: 'Dua for Anxiety',
+        titleAr: 'دعاء الكرب',
+        arabic: 'اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ، وَأَعُوذُ بِكَ مِنَ الْعَجْزِ وَالْكَسَلِ، وَأَعُوذُ بِكَ مِنَ الْجُبْنِ وَالْبُخْلِ، وَأَعُوذُ بِكَ مِنْ غَلَبَةِ الدَّيْنِ وَقَهْرِ الرِّجَالِ',
+        english: 'O Allah, I seek refuge in You from anxiety and sorrow, weakness and laziness, miserliness and cowardice, the burden of debts and from being overpowered by men.',
+        bangla: 'হে আল্লাহ, আমি উদ্বেগ ও দুঃখ থেকে তোমার আশ্রয় চাই। দুর্বলতা ও অলসতা থেকে, কাপুরুষতা ও কৃপণতা থেকে, ঋণের ভার ও মানুষের অত্যাচার থেকে তোমার আশ্রয় চাই।',
+        reference: 'Sahih Al-Bukhari 7/158',
+        category: 'evening',
+      },
+      {
+        id: 'sit-anxiety-2',
+        title: 'La Tahzan',
+        titleAr: 'لا تحزن',
+        arabic: 'لَا تَحْزَنْ إِنَّ اللَّهَ مَعَنَا',
+        english: 'Do not grieve; indeed Allah is with us.',
+        bangla: 'দুঃখ করো না, নিশ্চয়ই আল্লাহ আমাদের সাথে আছেন।',
+        reference: 'Surah At-Tawbah 9:40',
+        category: 'evening',
+      },
+      {
+        id: 'sit-anxiety-3',
+        title: 'Heart Contentment',
+        titleAr: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+        arabic: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+        english: 'Verily, in the remembrance of Allah do hearts find rest.',
+        bangla: 'নিশ্চয়ই আল্লাহর স্মরণেই অন্তর প্রশান্তি লাভ করে।',
+        reference: 'Surah Ar-Ra\'d 13:28',
+        category: 'evening',
+      },
+    ],
+  },
+  {
+    situation: 'Seeking Guidance',
+    emoji: '🤲',
+    description: 'When you need direction in life',
+    duas: [
+      {
+        id: 'sit-guidance-1',
+        title: 'Istikhara Dua',
+        titleAr: 'صلاة الاستخارة',
+        arabic: 'اللَّهُمَّ إِنِّي أَسْتَخِيرُكَ بِعِلْمِكَ، وَأَسْتَقْدِرُكَ بِقُدْرَتِكَ، وَأَسْأَلُكَ مِنْ فَضْلِكَ الْعَظِيمِ، فَإِنَّكَ تَقْدِرُ وَلَا أَقْدِرُ، وَتَعْلَمُ وَلَا أَعْلَمُ، وَأَنْتَ عَلَّامُ الْغُيُوبِ',
+        english: 'O Allah, I seek Your counsel through Your knowledge, and I seek Your power through Your might, and I ask of You from Your great bounty. For indeed You have power and I do not, and You know while I do not.',
+        bangla: 'হে আল্লাহ, আমি তোমার জ্ঞান দ্বারা তোমার কাছে কল্যাণ চাই, তোমার কুদরত দ্বারা শক্তি চাই, এবং তোমার মহান অনুগ্রহ থেকে চাই। তুমি ক্ষমতাবান আমি নই, তুমি জানো আমি জানি না, এবং তুমি অদৃশ্যের জ্ঞানী।',
+        reference: 'Sahih Al-Bukhari',
+        category: 'prayer',
+      },
+      {
+        id: 'sit-guidance-2',
+        title: 'Rabbi Zidni Ilma',
+        titleAr: 'رب زدني علماً',
+        arabic: 'رَبِّ زِدْنِي عِلْمًا',
+        english: 'My Lord, increase me in knowledge.',
+        bangla: 'হে আমার রব, আমাকে জ্ঞান বাড়াও।',
+        reference: 'Surah Ta-Ha 20:114',
+        category: 'prayer',
+      },
+    ],
+  },
+  {
+    situation: 'Before Important Task',
+    emoji: '💪',
+    description: 'Before exams, interviews, big decisions',
+    duas: [
+      {
+        id: 'sit-task-1',
+        title: 'Bismillah with Tawakkul',
+        titleAr: 'بسم الله توكلت على الله',
+        arabic: 'بِسْمِ اللهِ، تَوَكَّلْتُ عَلَى اللهِ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ',
+        english: 'In the name of Allah, I place my trust in Allah, and there is no power nor might except with Allah.',
+        bangla: 'আল্লাহর নামে, আমি আল্লাহর উপর ভরসা করলাম, এবং আল্লাহর ছাড়া কোনো ক্ষমতা ও শক্তি নেই।',
+        reference: 'Sunan Abu Dawud & Sunan At-Tirmidhi',
+        category: 'prayer',
+      },
+      {
+        id: 'sit-task-2',
+        title: 'Allahumma Barik',
+        titleAr: 'اللهم بارك',
+        arabic: 'اللَّهُمَّ بَارِكْ لَنَا فِي أَعْمَالِنَا وَبَارِكْ لَنَا فِي أَقْوَالِنَا',
+        english: 'O Allah, bless us in our deeds and bless us in our words.',
+        bangla: 'হে আল্লাহ, আমাদের আমলে বরকত দাও এবং আমাদের কথায় বরকত দাও।',
+        reference: 'Al-Mu\'jam Al-Kabir',
+        category: 'prayer',
+      },
+    ],
+  },
+  {
+    situation: 'After Loss',
+    emoji: '💔',
+    description: "When you've lost someone or something",
+    duas: [
+      {
+        id: 'sit-loss-1',
+        title: 'Patience Dua',
+        titleAr: 'إنا لله وإنا إليه راجعون',
+        arabic: 'إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ، اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي وَأَخْلِفْ لِي خَيْرًا مِنْهَا',
+        english: 'Indeed we belong to Allah, and indeed to Him we will return. O Allah, reward me in my affliction and compensate me with something better.',
+        bangla: 'নিশ্চয়ই আমরা আল্লাহর এবং নিশ্চয়ই আমরা তাঁর দিকে প্রত্যাবর্তন করব। হে আল্লাহ, আমার বিপদে আমাকে পুরস্কৃত করো এবং এর চেয়ে উত্তম কিছু দিয়ে প্রতিস্থাপন করো।',
+        reference: 'Sahih Muslim',
+        category: 'forgiveness',
+      },
+      {
+        id: 'sit-loss-2',
+        title: 'Inna Ma\'al Usri Yusra',
+        titleAr: 'إن مع العسر يسراً',
+        arabic: 'فَإِنَّ مَعَ الْعُسْرِ يُسْرًا، إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+        english: 'For indeed, with hardship comes ease. Indeed, with hardship comes ease.',
+        bangla: 'নিশ্চয়ই কষ্টের সাথে স্বস্তি আসে। নিশ্চয়ই কষ্টের সাথে স্বস্তি আসে।',
+        reference: 'Surah Ash-Sharh 94:5-6',
+        category: 'forgiveness',
+      },
+    ],
+  },
+  {
+    situation: 'Gratitude',
+    emoji: '🌟',
+    description: 'When you want to thank Allah',
+    duas: [
+      {
+        id: BUNDLED_DUAS[14].id,
+        title: BUNDLED_DUAS[14].title,
+        titleAr: BUNDLED_DUAS[14].titleAr,
+        arabic: BUNDLED_DUAS[14].arabic,
+        english: BUNDLED_DUAS[14].english,
+        bangla: BUNDLED_DUAS[14].bangla,
+        reference: BUNDLED_DUAS[14].reference,
+        category: BUNDLED_DUAS[14].category,
+      },
+      {
+        id: BUNDLED_DUAS[15].id,
+        title: BUNDLED_DUAS[15].title,
+        titleAr: BUNDLED_DUAS[15].titleAr,
+        arabic: BUNDLED_DUAS[15].arabic,
+        english: BUNDLED_DUAS[15].english,
+        bangla: BUNDLED_DUAS[15].bangla,
+        reference: BUNDLED_DUAS[15].reference,
+        category: BUNDLED_DUAS[15].category,
+      },
+      {
+        id: 'sit-gratitude-3',
+        title: 'Alhamdulillah',
+        titleAr: 'الحمد لله رب العالمين',
+        arabic: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
+        english: 'All praise is due to Allah, Lord of all the worlds.',
+        bangla: 'সকল প্রশংসা আল্লাহর, সমস্ত সৃষ্টির রব।',
+        reference: 'Surah Al-Fatihah 1:2',
+        category: 'gratitude',
+      },
+    ],
+  },
+  {
+    situation: 'Seeking Forgiveness',
+    emoji: '🤲',
+    description: 'When you want to repent',
+    duas: [
+      {
+        id: BUNDLED_DUAS[16].id,
+        title: BUNDLED_DUAS[16].title,
+        titleAr: BUNDLED_DUAS[16].titleAr,
+        arabic: BUNDLED_DUAS[16].arabic,
+        english: BUNDLED_DUAS[16].english,
+        bangla: BUNDLED_DUAS[16].bangla,
+        reference: BUNDLED_DUAS[16].reference,
+        category: BUNDLED_DUAS[16].category,
+      },
+      {
+        id: BUNDLED_DUAS[17].id,
+        title: BUNDLED_DUAS[17].title,
+        titleAr: BUNDLED_DUAS[17].titleAr,
+        arabic: BUNDLED_DUAS[17].arabic,
+        english: BUNDLED_DUAS[17].english,
+        bangla: BUNDLED_DUAS[17].bangla,
+        reference: BUNDLED_DUAS[17].reference,
+        category: BUNDLED_DUAS[17].category,
+      },
+      {
+        id: BUNDLED_DUAS[18].id,
+        title: BUNDLED_DUAS[18].title,
+        titleAr: BUNDLED_DUAS[18].titleAr,
+        arabic: BUNDLED_DUAS[18].arabic,
+        english: BUNDLED_DUAS[18].english,
+        bangla: BUNDLED_DUAS[18].bangla,
+        reference: BUNDLED_DUAS[18].reference,
+        category: BUNDLED_DUAS[18].category,
+      },
+    ],
+  },
+  {
+    situation: 'Before Sleep',
+    emoji: '🌙',
+    description: 'End your day with remembrance',
+    duas: [
+      {
+        id: BUNDLED_DUAS[8].id,
+        title: BUNDLED_DUAS[8].title,
+        titleAr: BUNDLED_DUAS[8].titleAr,
+        arabic: BUNDLED_DUAS[8].arabic,
+        english: BUNDLED_DUAS[8].english,
+        bangla: BUNDLED_DUAS[8].bangla,
+        reference: BUNDLED_DUAS[8].reference,
+        category: BUNDLED_DUAS[8].category,
+      },
+      {
+        id: BUNDLED_DUAS[9].id,
+        title: BUNDLED_DUAS[9].title,
+        titleAr: BUNDLED_DUAS[9].titleAr,
+        arabic: BUNDLED_DUAS[9].arabic,
+        english: BUNDLED_DUAS[9].english,
+        bangla: BUNDLED_DUAS[9].bangla,
+        reference: BUNDLED_DUAS[9].reference,
+        category: BUNDLED_DUAS[9].category,
+      },
+      {
+        id: BUNDLED_DUAS[10].id,
+        title: BUNDLED_DUAS[10].title,
+        titleAr: BUNDLED_DUAS[10].titleAr,
+        arabic: BUNDLED_DUAS[10].arabic,
+        english: BUNDLED_DUAS[10].english,
+        bangla: BUNDLED_DUAS[10].bangla,
+        reference: BUNDLED_DUAS[10].reference,
+        category: BUNDLED_DUAS[10].category,
+      },
+    ],
+  },
+];
+
+// ─── Prayer Time Calculation ───────────────────────────
+
+function calculatePrayerTimes(lat: number, lng: number, date: Date): Record<string, string> {
+  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
+  const declination = -23.45 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
+  const B = (360 / 365) * (dayOfYear - 81) * (Math.PI / 180);
+  const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const timezone = -date.getTimezoneOffset() / 60;
+  const lngOffset = lng / 15;
+  const noon = 12 - timezone + lngOffset - EoT / 60;
+  const latRad = lat * Math.PI / 180;
+  const decRad = declination * Math.PI / 180;
+
+  const haToTime = (angle: number): number | null => {
+    const cosH = (Math.sin(angle * Math.PI / 180) - Math.sin(latRad) * Math.sin(decRad)) / (Math.cos(latRad) * Math.cos(decRad));
+    if (cosH > 1 || cosH < -1) return null;
+    const H = (Math.acos(cosH) * 180 / Math.PI) / 15;
+    return H;
+  };
+
+  const formatTime = (hours: number | null): string => {
+    if (hours === null) return '--:--';
+    const totalMinutes = Math.round(hours * 60);
+    let h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const fajrAngle = -18;
+  const ishaAngle = -17;
+  const sunriseAngle = -0.833;
+
+  const fajrH = haToTime(fajrAngle);
+  const sunriseH = haToTime(sunriseAngle);
+  const asrAngle = Math.atan(1 / (1 + Math.tan(Math.abs(latRad - decRad)))) * 180 / Math.PI;
+  const asrH = haToTime(asrAngle);
+  const maghribH = haToTime(sunriseAngle);
+  const ishaH = haToTime(ishaAngle);
+
+  return {
+    Fajr: formatTime(noon - (fajrH ?? 6)),
+    Sunrise: formatTime(noon - (sunriseH ?? 6)),
+    Dhuhr: formatTime(noon),
+    Asr: formatTime(noon + (asrH ?? 4)),
+    Maghrib: formatTime(noon + (maghribH ?? 6)),
+    Isha: formatTime(noon + (ishaH ?? 6)),
+  };
+}
+
+function getNextPrayer(prayerTimes: Record<string, string>): string | null {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const order = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  for (const name of order) {
+    const timeStr = prayerTimes[name];
+    if (!timeStr || timeStr === '--:--') continue;
+    const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
+    if (!parts) continue;
+    let h = parseInt(parts[1]);
+    const m = parseInt(parts[2]);
+    const ampm = parts[3];
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    const prayerMinutes = h * 60 + m;
+    if (prayerMinutes > currentMinutes) return name;
+  }
+  return 'Fajr';
+}
 
 // ─── Islamic Name Correction ─────────────────────────────
 // Replaces Biblical/Christian names with proper Islamic names in translations
@@ -3664,6 +4015,86 @@ function DailyMotivation({
     return BUNDLED_HADITHS[dayOfYear % BUNDLED_HADITHS.length];
   });
 
+  // ── Prayer Times State ──
+  const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem('noor-location');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+  const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (location) {
+      setPrayerTimes(calculatePrayerTimes(location.lat, location.lng, new Date()));
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(loc);
+          setLocationDenied(false);
+          try { localStorage.setItem('noor-location', JSON.stringify(loc)); } catch {}
+        },
+        () => {
+          const mecca = { lat: 21.4225, lng: 39.8262 };
+          setLocation(mecca);
+          setLocationDenied(true);
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      setLocation({ lat: 21.4225, lng: 39.8262 });
+      setLocationDenied(true);
+    }
+  }, [location]);
+
+  const refreshLocation = useCallback(() => {
+    try { localStorage.removeItem('noor-location'); } catch {}
+    setLocation(null);
+    setPrayerTimes(null);
+    setLocationDenied(false);
+  }, []);
+
+  const nextPrayer = prayerTimes ? getNextPrayer(prayerTimes) : null;
+
+  // ── Situation Duas State ──
+  const [selectedSituation, setSelectedSituation] = useState<string | null>(null);
+  const [sitDuaCopied, setSitDuaCopied] = useState(false);
+
+  // TTS for situation duas
+  const [isSitSpeaking, setIsSitSpeaking] = useState(false);
+  const [sitSpeakingLang, setSitSpeakingLang] = useState<string | null>(null);
+  const speakSitDua = useCallback((text: string, lang: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    const voices = speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    if (match) utterance.voice = match;
+    utterance.onstart = () => { setIsSitSpeaking(true); setSitSpeakingLang(lang); };
+    utterance.onend = () => { setIsSitSpeaking(false); setSitSpeakingLang(null); };
+    utterance.onerror = () => { setIsSitSpeaking(false); setSitSpeakingLang(null); };
+    speechSynthesis.speak(utterance);
+  }, []);
+  const stopSitSpeaking = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    setIsSitSpeaking(false);
+    setSitSpeakingLang(null);
+  }, []);
+
   const fetchVerse = useCallback(async (ayahNum?: number) => {
     try {
       const num = ayahNum ?? getDayOfYearAyah();
@@ -3752,6 +4183,87 @@ function DailyMotivation({
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* ─── Prayer Times Widget ─── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="px-4 pt-4 pb-2 sm:px-6"
+      >
+        <Card className="overflow-hidden shadow-lg">
+          <div className="bg-gradient-to-r from-[#0D4B3C] to-[#0D4B3C]/90 dark:from-[#0D4B3C] dark:to-[#0D4B3C]/80 px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-5 h-5 text-[#C8A951]" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Prayer Times</h3>
+                <p className="text-[10px] text-[#C8A951]/80">
+                  {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {locationDenied && (
+                <span className="text-[9px] text-[#C8A951]/60 max-w-[100px] truncate hidden sm:inline">Default: Makkah</span>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-7 h-7 text-white/70 hover:text-white hover:bg-white/10"
+                onClick={refreshLocation}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+          <CardContent className="p-4">
+            {prayerTimes ? (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { name: 'Fajr', icon: '🌅', time: prayerTimes.Fajr },
+                  { name: 'Sunrise', icon: '☀️', time: prayerTimes.Sunrise },
+                  { name: 'Dhuhr', icon: '🌤️', time: prayerTimes.Dhuhr },
+                  { name: 'Asr', icon: '⛅', time: prayerTimes.Asr },
+                  { name: 'Maghrib', icon: '🌅', time: prayerTimes.Maghrib },
+                  { name: 'Isha', icon: '🌙', time: prayerTimes.Isha },
+                ].map(({ name, icon, time }) => (
+                  <div
+                    key={name}
+                    className={`relative p-2.5 rounded-xl text-center transition-all duration-200 ${
+                      nextPrayer === name
+                        ? 'bg-[#C8A951]/10 dark:bg-[#C8A951]/15 border-2 border-[#C8A951] shadow-sm'
+                        : 'bg-[#F8F6F0] dark:bg-[#0F1A14] border border-[#E5E1D8] dark:border-[#2D3E34]'
+                    }`}
+                  >
+                    {nextPrayer === name && (
+                      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2">
+                        <Badge className="text-[8px] h-4 px-1.5 bg-[#C8A951] text-[#0D4B3C] border-0 font-bold">NEXT</Badge>
+                      </div>
+                    )}
+                    <p className="text-lg mb-0.5">{icon}</p>
+                    <p className={`text-[11px] font-semibold mb-0.5 ${nextPrayer === name ? 'text-[#C8A951]' : 'text-[#0D4B3C] dark:text-[#C8A951]'}`}>
+                      {name}
+                    </p>
+                    <p className={`text-xs font-bold ${nextPrayer === name ? 'text-[#0D4B3C] dark:text-white' : 'text-[#4A5568] dark:text-[#9CA3AF]'}`}>
+                      {time}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 text-[#0D4B3C] dark:text-[#C8A951] animate-spin mr-2" />
+                <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Calculating prayer times...</span>
+              </div>
+            )}
+            {locationDenied && prayerTimes && (
+              <p className="text-[10px] text-[#9CA3AF] text-center mt-2">
+                Using default location (Makkah). Tap <MapPin className="w-2.5 h-2.5 inline" /> to refresh.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* ★ MAIN HERO: Mood-Based Spiritual Guidance ★ */}
       <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} onNavigateToListen={onNavigateToListen} />
 
@@ -3883,6 +4395,219 @@ function DailyMotivation({
               </motion.div>
             ))}
           </div>
+        </motion.div>
+
+        {/* ─── Duas for Your Moment ─── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
+              <HandHeart className="w-4 h-4 text-[#0D4B3C] dark:text-[#C8A951]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Duas for Your Moment</h3>
+              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">Supplications for every life situation</p>
+            </div>
+          </div>
+
+          {/* Situation Cards Row */}
+          <div className="flex gap-2.5 overflow-x-auto pb-2 mb-3 -mx-1 px-1 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+            {SITUATION_DUAS.map((sit) => (
+              <motion.button
+                key={sit.situation}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  stopSitSpeaking();
+                  setSelectedSituation(selectedSituation === sit.situation ? null : sit.situation);
+                }}
+                className={`flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border-2 text-left transition-all duration-200 min-w-fit ${
+                  selectedSituation === sit.situation
+                    ? 'border-[#C8A951] bg-[#C8A951]/5 dark:bg-[#C8A951]/10 shadow-sm'
+                    : 'border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#C8A951]/40 bg-white dark:bg-[#0F1A14]'
+                }`}
+              >
+                <span className="text-xl">{sit.emoji}</span>
+                <div>
+                  <p className={`text-xs font-semibold ${selectedSituation === sit.situation ? 'text-[#C8A951]' : 'text-[#1A1A2E] dark:text-[#E8E0D0]'}`}>
+                    {sit.situation}
+                  </p>
+                  <p className="text-[9px] text-[#9CA3AF] max-w-[120px] truncate">{sit.description}</p>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Expanded Situation Duas */}
+          <AnimatePresence>
+            {selectedSituation && (() => {
+              const sitData = SITUATION_DUAS.find(s => s.situation === selectedSituation);
+              if (!sitData) return null;
+              return (
+                <motion.div
+                  key={selectedSituation}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-3 mt-1">
+                    {sitData.duas.map((dua, idx) => (
+                      <motion.div
+                        key={dua.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.08 }}
+                      >
+                        <Card className="overflow-hidden border border-[#E5E1D8] dark:border-[#2D3E34]">
+                          <div className="h-0.5 bg-gradient-to-r from-[#0D4B3C]/40 via-[#C8A951]/60 to-[#0D4B3C]/40" />
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <h4 className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">{dua.title}</h4>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {/* TTS Play buttons */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isSitSpeaking && sitSpeakingLang === 'ar') {
+                                          stopSitSpeaking();
+                                        } else {
+                                          speakSitDua(dua.arabic, 'ar');
+                                        }
+                                      }}
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                        isSitSpeaking && sitSpeakingLang === 'ar'
+                                          ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
+                                          : 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951] hover:bg-[#0D4B3C]/20'
+                                      }`}
+                                    >
+                                      {isSitSpeaking && sitSpeakingLang === 'ar' ? (
+                                        <motion.div
+                                          animate={{ scale: [1, 1.2, 1] }}
+                                          transition={{ repeat: Infinity, duration: 1 }}
+                                        >
+                                          <Pause className="w-3 h-3" />
+                                        </motion.div>
+                                      ) : (
+                                        <Volume2 className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>Arabic</p></TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isSitSpeaking && sitSpeakingLang === 'en') {
+                                          stopSitSpeaking();
+                                        } else {
+                                          speakSitDua(dua.english, 'en');
+                                        }
+                                      }}
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 text-[10px] font-bold ${
+                                        isSitSpeaking && sitSpeakingLang === 'en'
+                                          ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
+                                          : 'bg-[#E5E1D8]/50 text-[#6B7280] dark:bg-[#2D3E34] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                                      }`}
+                                    >
+                                      EN
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>English</p></TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isSitSpeaking && sitSpeakingLang === 'bn') {
+                                          stopSitSpeaking();
+                                        } else {
+                                          speakSitDua(dua.bangla, 'bn');
+                                        }
+                                      }}
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 text-[10px] font-bold ${
+                                        isSitSpeaking && sitSpeakingLang === 'bn'
+                                          ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
+                                          : 'bg-[#E5E1D8]/50 text-[#6B7280] dark:bg-[#2D3E34] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                                      }`}
+                                    >
+                                      বা
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>বাংলা</p></TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+
+                            {/* Speaking Indicator */}
+                            {isSitSpeaking && (
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <motion.div
+                                  className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                                  transition={{ repeat: Infinity, duration: 0.8 }}
+                                />
+                                <motion.div
+                                  className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.2 }}
+                                />
+                                <motion.div
+                                  className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
+                                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                                  transition={{ repeat: Infinity, duration: 0.8, delay: 0.4 }}
+                                />
+                                <span className="text-[10px] text-[#0D4B3C] dark:text-[#C8A951] ml-0.5">
+                                  {sitSpeakingLang === 'ar' ? 'Reciting Arabic...' : sitSpeakingLang === 'en' ? 'Speaking English...' : 'বাংলায় পড়ছি...'}
+                                </span>
+                              </div>
+                            )}
+
+                            <div dir="rtl" lang="ar" className="font-arabic text-base text-[#0D4B3C] dark:text-[#E8E0D0] leading-[2] mb-2">
+                              {dua.arabic}
+                            </div>
+                            <Separator className="my-2" />
+                            <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed mb-2">
+                              {dua.english}
+                            </p>
+                            <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed mb-2">
+                              {dua.bangla}
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-[10px] text-[#C8A951] font-medium">— {dua.reference}</p>
+                              <button
+                                onClick={() => {
+                                  const text = `${dua.arabic}\n\n${dua.english}\n\n${dua.bangla}\n\n— ${dua.reference}`;
+                                  navigator.clipboard.writeText(text).then(() => {
+                                    setSitDuaCopied(true);
+                                    showToast('Dua copied to clipboard');
+                                    setTimeout(() => setSitDuaCopied(false), 2000);
+                                  });
+                                }}
+                                className="flex items-center gap-1 text-[10px] text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0D4B3C] dark:hover:text-[#C8A951] transition-colors"
+                              >
+                                {sitDuaCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                {sitDuaCopied ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })()}
+          </AnimatePresence>
         </motion.div>
       </div>
     </div>
@@ -4154,6 +4879,51 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
   const [copied, setCopied] = useState(false);
   const [search, setSearch] = useState('');
 
+  // ── TTS State ──
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingLang, setSpeakingLang] = useState<string | null>(null);
+  const [speechRate, setSpeechRate] = useState(1);
+
+  const speakDua = useCallback((text: string, lang: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = speechRate;
+    // Try to find matching voice
+    const voices = speechSynthesis.getVoices();
+    const match = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    if (match) utterance.voice = match;
+    utterance.onstart = () => { setIsSpeaking(true); setSpeakingLang(lang); };
+    utterance.onend = () => { setIsSpeaking(false); setSpeakingLang(null); };
+    utterance.onerror = () => { setIsSpeaking(false); setSpeakingLang(null); };
+    speechSynthesis.speak(utterance);
+  }, [speechRate]);
+
+  const stopSpeaking = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setSpeakingLang(null);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  // Load voices (needed for some browsers)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      speechSynthesis.getVoices();
+      speechSynthesis.addEventListener('voiceschanged', () => { speechSynthesis.getVoices(); });
+    }
+  }, []);
+
   const filteredDuas = useMemo(() => {
     let duas = BUNDLED_DUAS.filter((d) => d.category === activeCategory);
     if (search.trim()) {
@@ -4261,6 +5031,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
               <Card
                 className="overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200 border border-[#E5E1D8] dark:border-[#2D3E34]"
                 onClick={() => {
+                  stopSpeaking();
                   setSelectedDua(dua);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -4277,7 +5048,39 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
                       </p>
                       <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1.5 line-clamp-1">{dua.english}</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#9CA3AF] flex-shrink-0 mt-1" />
+                    <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                      {/* Speaking indicator */}
+                      {isSpeaking && speakingLang === 'ar' && (
+                        <div className="flex items-center gap-0.5">
+                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6 }} />
+                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} />
+                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} />
+                        </div>
+                      )}
+                      {/* Play/Pause Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSpeaking && speakingLang === 'ar') {
+                            stopSpeaking();
+                          } else {
+                            speakDua(dua.arabic, 'ar');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm ${
+                          isSpeaking && speakingLang === 'ar'
+                            ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C] shadow-md'
+                            : 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951] hover:bg-[#0D4B3C]/20 dark:hover:bg-[#C8A951]/20'
+                        }`}
+                      >
+                        {isSpeaking && speakingLang === 'ar' ? (
+                          <Pause className="w-3.5 h-3.5" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -4299,6 +5102,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
       {/* Back button */}
       <button
         onClick={() => {
+          stopSpeaking();
           setSelectedDua(null);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
@@ -4323,7 +5127,111 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
           <CardContent className="p-6">
             {/* Title */}
             <h2 className="text-lg font-bold text-[#0D4B3C] dark:text-[#C8A951] text-center mb-1">{selectedDua.title}</h2>
-            <p dir="rtl" lang="ar" className="font-arabic text-sm text-[#9CA3AF] text-center mb-5">{selectedDua.titleAr}</p>
+            <p dir="rtl" lang="ar" className="font-arabic text-sm text-[#9CA3AF] text-center mb-4">{selectedDua.titleAr}</p>
+
+            {/* ★ Prominent TTS Play Controls ★ */}
+            <div className="flex flex-col items-center gap-3 mb-5">
+              {/* Play Buttons Row */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (isSpeaking && speakingLang === 'ar') {
+                      stopSpeaking();
+                    } else {
+                      speakDua(selectedDua.arabic, 'ar');
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 shadow-sm ${
+                    isSpeaking && speakingLang === 'ar'
+                      ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C] shadow-lg'
+                      : 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951] hover:bg-[#0D4B3C]/20 dark:hover:bg-[#C8A951]/20'
+                  }`}
+                >
+                  {isSpeaking && speakingLang === 'ar' ? (
+                    <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
+                      <Pause className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                  عربي
+                </button>
+                <button
+                  onClick={() => {
+                    if (isSpeaking && speakingLang === 'en') {
+                      stopSpeaking();
+                    } else {
+                      speakDua(selectedDua.english, 'en');
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    isSpeaking && speakingLang === 'en'
+                      ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
+                      : 'bg-[#E5E1D8]/50 text-[#6B7280] dark:bg-[#2D3E34]/50 dark:text-[#9CA3AF] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                  }`}
+                >
+                  {isSpeaking && speakingLang === 'en' ? <Pause className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  English
+                </button>
+                <button
+                  onClick={() => {
+                    if (isSpeaking && speakingLang === 'bn') {
+                      stopSpeaking();
+                    } else {
+                      speakDua(selectedDua.bangla, 'bn');
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    isSpeaking && speakingLang === 'bn'
+                      ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
+                      : 'bg-[#E5E1D8]/50 text-[#6B7280] dark:bg-[#2D3E34]/50 dark:text-[#9CA3AF] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                  }`}
+                >
+                  {isSpeaking && speakingLang === 'bn' ? <Pause className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  বাংলা
+                </button>
+              </div>
+
+              {/* Speaking Indicator */}
+              {isSpeaking && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7 }} />
+                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.15 }} />
+                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.3 }} />
+                  </div>
+                  <span className="text-[11px] text-[#0D4B3C] dark:text-[#C8A951] font-medium">
+                    {speakingLang === 'ar' ? 'Reciting Arabic...' : speakingLang === 'en' ? 'Speaking English...' : 'বাংলায় পড়ছি...'}
+                  </span>
+                  <button
+                    onClick={stopSpeaking}
+                    className="ml-2 w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-red-500" />
+                  </button>
+                </div>
+              )}
+
+              {/* Rate Control */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-[#9CA3AF]">Speed:</span>
+                {([0.7, 1].map((rate) => (
+                  <button
+                    key={rate}
+                    onClick={() => setSpeechRate(rate)}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all duration-200 ${
+                      speechRate === rate
+                        ? 'bg-[#C8A951] text-[#0D4B3C] dark:text-[#0D4B3C]'
+                        : 'bg-[#E5E1D8]/50 text-[#9CA3AF] dark:bg-[#2D3E34] hover:bg-[#E5E1D8] dark:hover:bg-[#2D3E34]'
+                    }`}
+                  >
+                    {rate === 0.7 ? '0.7x Learning' : '1x Normal'}
+                  </button>
+                )))}
+              </div>
+            </div>
+
+            <Separator className="my-3" />
 
             {/* Language Selector */}
             <div className="flex items-center justify-center gap-1.5 mb-5">

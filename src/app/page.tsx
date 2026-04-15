@@ -45,6 +45,44 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+// ─── Error Boundary ────────────────────────────────────
+
+class TabErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[TabErrorBoundary]', error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="w-16 h-16 mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">Something went wrong</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">This section encountered an error.</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 rounded-lg bg-[#0D4B3C] dark:bg-[#C8A951] text-white dark:text-[#0D4B3C] text-xs font-medium hover:opacity-90 transition-opacity"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────
 
 interface SurahInfo {
@@ -415,6 +453,9 @@ export default function Home() {
   const [playerMeta, setPlayerMeta] = useState<{ startSurah: number; endSurah: number; surahList: SurahInfo[] } | null>(null);
   const [autoPlaySurah, setAutoPlaySurah] = useState<number | null>(null);
 
+  // Stable callback for auto-play consumption (prevents infinite useEffect churn)
+  const onAutoPlayConsumed = useCallback(() => setAutoPlaySurah(null), []);
+
   // Navigate from My Space to Listen tab with a specific surah
   const navigateToListen = useCallback((surahNumber: number) => {
     setAutoPlaySurah(surahNumber);
@@ -438,57 +479,67 @@ export default function Home() {
             transition={{ duration: 0.25, ease: 'easeInOut' }}
           >
             {activeTab === 'listen' && (
-              <ContinuousPlayer
-                globalPlayer={globalPlayer}
-                setGlobalPlayer={setGlobalPlayer}
-                globalAudioRef={globalAudioRef}
-                playerMeta={playerMeta}
-                setPlayerMeta={setPlayerMeta}
-                showToast={showToast}
-                autoPlaySurah={autoPlaySurah}
-                onAutoPlayConsumed={() => setAutoPlaySurah(null)}
-              />
+              <TabErrorBoundary>
+                <ContinuousPlayer
+                  globalPlayer={globalPlayer}
+                  setGlobalPlayer={setGlobalPlayer}
+                  globalAudioRef={globalAudioRef}
+                  playerMeta={playerMeta}
+                  setPlayerMeta={setPlayerMeta}
+                  showToast={showToast}
+                  autoPlaySurah={autoPlaySurah}
+                  onAutoPlayConsumed={onAutoPlayConsumed}
+                />
+              </TabErrorBoundary>
             )}
             {activeTab === 'quran' && (
-              selectedSurah !== null ? (
-                <SurahReader
-                  surahNumber={selectedSurah}
-                  onBack={() => setSelectedSurah(null)}
-                  arabicFontSize={arabicFontSize}
-                  addBookmark={addBookmark}
-                  removeBookmark={removeBookmark}
-                  isBookmarked={isBookmarked}
-                  showToast={showToast}
-                />
-              ) : (
-                <SurahList onSelectSurah={(n) => { setSelectedSurah(n); }} />
-              )
+              <TabErrorBoundary>
+                {selectedSurah !== null ? (
+                  <SurahReader
+                    surahNumber={selectedSurah}
+                    onBack={() => setSelectedSurah(null)}
+                    arabicFontSize={arabicFontSize}
+                    addBookmark={addBookmark}
+                    removeBookmark={removeBookmark}
+                    isBookmarked={isBookmarked}
+                    showToast={showToast}
+                  />
+                ) : (
+                  <SurahList onSelectSurah={(n) => { setSelectedSurah(n); }} />
+                )}
+              </TabErrorBoundary>
             )}
             {activeTab === 'daily' && (
-              <DailyMotivation
-                addBookmark={addBookmark}
-                isBookmarked={isBookmarked}
-                showToast={showToast}
-                arabicFontSize={arabicFontSize}
-                onNavigateToListen={navigateToListen}
-              />
+              <TabErrorBoundary>
+                <DailyMotivation
+                  addBookmark={addBookmark}
+                  isBookmarked={isBookmarked}
+                  showToast={showToast}
+                  arabicFontSize={arabicFontSize}
+                  onNavigateToListen={navigateToListen}
+                />
+              </TabErrorBoundary>
             )}
             {activeTab === 'bookmarks' && (
-              <BookmarksView
-                bookmarks={bookmarks}
-                onRemove={removeBookmark}
-                onSelect={navigateToSurah}
-                showToast={showToast}
-                arabicFontSize={arabicFontSize}
-              />
+              <TabErrorBoundary>
+                <BookmarksView
+                  bookmarks={bookmarks}
+                  onRemove={removeBookmark}
+                  onSelect={navigateToSurah}
+                  showToast={showToast}
+                  arabicFontSize={arabicFontSize}
+                />
+              </TabErrorBoundary>
             )}
             {activeTab === 'settings' && (
-              <SettingsView
-                isDark={isDark}
-                toggleTheme={toggleTheme}
-                arabicFontSize={arabicFontSize}
-                changeFontSize={changeFontSize}
-              />
+              <TabErrorBoundary>
+                <SettingsView
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  arabicFontSize={arabicFontSize}
+                  changeFontSize={changeFontSize}
+                />
+              </TabErrorBoundary>
             )}
           </motion.div>
         </AnimatePresence>
@@ -1532,12 +1583,15 @@ function ContinuousPlayer({
     setPlayerMeta(null);
   }, [globalAudioRef, setGlobalPlayer, setPlayerMeta]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — prevent stale handlers from updating unmounted component
   useEffect(() => {
     return () => {
       if (globalAudioRef.current) {
         globalAudioRef.current.pause();
         globalAudioRef.current.onended = null;
+        globalAudioRef.current.ontimeupdate = null;
+        globalAudioRef.current.onerror = null;
+        globalAudioRef.current = null;
       }
     };
   }, []);

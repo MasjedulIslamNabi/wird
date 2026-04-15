@@ -20,3 +20,21 @@ Stage Summary:
 - All 10 components verified: IslamicHeader, MobileBottomNav, SurahList, SurahReader, ContinuousPlayer, MiniPlayer, MoodQuiz, DailyMotivation, BookmarksView, SettingsView
 - Minor TS fix applied for strict null safety
 - App serves correctly with 41KB initial HTML payload
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix Listen tab crash and add error boundaries
+
+Work Log:
+- Analyzed ContinuousPlayer component (lines 1133-1960) for runtime errors
+- Fixed incomplete cleanup on unmount: added ontimeupdate=null, onerror=null, globalAudioRef.current=null
+- Fixed unstable onAutoPlayConsumed callback: wrapped in useCallback to prevent infinite useEffect churn
+- Added TabErrorBoundary class component wrapping all 6 tab sections (listen, quran, daily, bookmarks, settings, home)
+- Error boundary shows friendly "Something went wrong" UI with "Try Again" button instead of blank page
+- Build verified: all changes compile successfully
+
+Stage Summary:
+- 3 fixes applied: cleanup, stable callback, error boundaries
+- App will no longer go blank if any tab has a runtime error
+- Listen tab stale audio handler issue resolved

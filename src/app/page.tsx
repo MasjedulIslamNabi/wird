@@ -38,7 +38,7 @@ import {
   HandHeart,
   MapPin,
   Clock,
-  Compass,
+  ScrollText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -932,34 +932,6 @@ function getArabicFontSize(size: string): string {
 
 
 
-// ─── Qibla Helpers ────────────────────────────────────────
-
-const KAABA_LAT = 21.4225;
-const KAABA_LNG = 39.8262;
-
-function calculateQiblaBearing(lat: number, lng: number): number {
-  const latRad = lat * Math.PI / 180;
-  const lngRad = lng * Math.PI / 180;
-  const kaabaLatRad = KAABA_LAT * Math.PI / 180;
-  const kaabaLngRad = KAABA_LNG * Math.PI / 180;
-  const dLng = kaabaLngRad - lngRad;
-  const x = Math.sin(dLng);
-  const y = Math.cos(latRad) * Math.tan(kaabaLatRad) - Math.sin(latRad) * Math.cos(dLng);
-  let qibla = Math.atan2(x, y) * 180 / Math.PI;
-  return (qibla + 360) % 360;
-}
-
-function calculateDistanceToKaaba(lat: number, lng: number): number {
-  const R = 6371; // Earth radius in km
-  const dLat = (KAABA_LAT - lat) * Math.PI / 180;
-  const dLng = (KAABA_LNG - lng) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat * Math.PI / 180) * Math.cos(KAABA_LAT * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c);
-}
-
 // ─── Toast Utility ────────────────────────────────────────
 
 function useToast() {
@@ -987,7 +959,7 @@ function useToast() {
 // ─── Main Page Component ──────────────────────────────────
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla'>('quran');
+  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'stories'>('quran');
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -1216,9 +1188,9 @@ export default function Home() {
                 />
               </TabErrorBoundary>
             )}
-            {activeTab === 'qibla' && (
+            {activeTab === 'stories' && (
               <TabErrorBoundary>
-                <QiblaFinder />
+                <ProphetStories />
               </TabErrorBoundary>
             )}
           </motion.div>
@@ -1278,7 +1250,7 @@ function IslamicHeader({
   toggleTheme,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'stories') => void;
   setSelectedSurah: (n: number | null) => void;
   isDark: boolean;
   toggleTheme: () => void;
@@ -1288,7 +1260,7 @@ function IslamicHeader({
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'duas' as const, label: 'Duas', icon: HandHeart },
-    { id: 'qibla' as const, label: 'Qibla', icon: Compass },
+    { id: 'stories' as const, label: 'Stories', icon: ScrollText },
     { id: 'bookmarks' as const, label: 'Bookmarks', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -1356,7 +1328,7 @@ function MobileBottomNav({
   setSelectedSurah,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'stories') => void;
   setSelectedSurah: (n: number | null) => void;
 }) {
   const tabs = [
@@ -1364,7 +1336,7 @@ function MobileBottomNav({
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'duas' as const, label: 'Duas', icon: HandHeart },
-    { id: 'qibla' as const, label: 'Qibla', icon: Compass },
+    { id: 'stories' as const, label: 'Stories', icon: ScrollText },
     { id: 'bookmarks' as const, label: 'Saved', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -4816,349 +4788,484 @@ function DailyMotivation({
 
 
 
-// ─── Qibla Finder ─────────────────────────────────────────
+// ─── Prophet Stories ───────────────────────────────────────
 
-function QiblaFinder() {
-  const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const cached = localStorage.getItem('wird-location');
-      if (cached) return JSON.parse(cached);
-    } catch {}
-    return null;
-  });
-  const [heading, setHeading] = useState(0);
-  const [compassAvailable, setCompassAvailable] = useState(true);
-  const [compassError, setCompassError] = useState(false);
-  const [locationLoaded, setLocationLoaded] = useState(false);
+interface ProphetStory {
+  id: string;
+  name: string;
+  nameAr: string;
+  title: string;
+  era: string;
+  emoji: string;
+  color: string;
+  summary: string;
+  lessons: string[];
+  story: string;
+  verses: string[];
+}
 
-  const qiblaBearing = useMemo(() => location ? calculateQiblaBearing(location.lat, location.lng) : null, [location]);
-  const distance = useMemo(() => location ? calculateDistanceToKaaba(location.lat, location.lng) : null, [location]);
+const PROPHET_STORIES: ProphetStory[] = [
+  {
+    id: 'adam',
+    name: 'Adam',
+    nameAr: 'آدم',
+    title: 'The First Human & First Prophet',
+    era: 'Beginning of Creation',
+    emoji: '🌍',
+    color: '#2D5016',
+    summary: 'The story of the first human being created by Allah, his life in Paradise, the temptation by Iblis, and the journey of repentance that established the pattern for all humanity.',
+    lessons: [
+      'Allah\'s mercy is greater than any mistake — repentance is always accepted',
+      'Satan is an open enemy who will always try to misguide us',
+      'Life on earth is a test, and the hereafter is our true home',
+      'Every human shares the honor of being Allah\'s creation'
+    ],
+    story: `Allah created Adam (peace be upon him) from clay and breathed His spirit into him. He was given the honor of being the first human and the first prophet. Allah taught Adam the names of all things, a knowledge that even the angels did not possess. When Allah commanded the angels to bow before Adam, all obeyed except Iblis (Satan), who refused out of arrogance and became the first rejecter of faith.
 
-  // Get location
-  useEffect(() => {
-    if (location) {
-      setLocationLoaded(true);
-      return;
-    }
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLocation(loc);
-          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
-        },
-        () => {
-          const mecca = { lat: 21.4225, lng: 39.8262 };
-          setLocation(mecca);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      setLocation({ lat: 21.4225, lng: 39.8262 });
-    }
-  }, [location]);
+Allah placed Adam and his wife Hawwa (Eve) in Paradise, where they could enjoy everything except one specific tree. Iblis whispered to them and deceived them into eating from the forbidden tree. Immediately, they realized their mistake and repented sincerely. Allah, in His infinite mercy, forgave them but decreed that they would live on earth as a test.
 
-  // Get compass heading
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+This story teaches us that every human makes mistakes, but what matters is turning back to Allah in sincere repentance. Adam is the father of all humanity, and his story reminds us of our shared origin and our shared purpose: to worship Allah and live righteously on this earth.`,
+    verses: ['Al-Baqarah 2:30-39', 'Al-A\'raf 7:11-27', 'Ta-Ha 20:115-124'],
+  },
+  {
+    id: 'nuh',
+    name: 'Nuh',
+    nameAr: 'نوح',
+    title: 'The Prophet of the Great Flood',
+    era: 'Ancient Civilization',
+    emoji: '⚓',
+    color: '#1A5276',
+    summary: 'For 950 years, Prophet Nuh called his people to worship Allah alone. When they persisted in their rejection, Allah saved him and the believers in a great Ark while the flood destroyed the disbelievers.',
+    lessons: [
+      'Patience in dawah (calling to truth) is essential, even over centuries',
+      'Allah saves those who believe, no matter how desperate the situation',
+      'Mockery and rejection by society should never weaken our faith',
+      'Family does not guarantee guidance — faith is an individual choice'
+    ],
+    story: `Prophet Nuh (Noah, peace be upon him) was sent to a people who had fallen into idol worship. For an astonishing 950 years, he called them day and night, in public and in private, to worship Allah alone. He used every method of persuasion — gentle advice, warnings of punishment, promises of reward — but only a handful of people believed.
 
-    const handleOrientation = (event: DeviceOrientationEvent) => {
-      const ev = event as any;
-      let h: number;
-      if (ev.webkitCompassHeading !== undefined) {
-        h = ev.webkitCompassHeading;
-      } else if (ev.alpha !== undefined) {
-        h = (360 - ev.alpha) % 360;
-      } else {
-        h = 0;
-      }
-      setHeading(h);
-    };
+The elite of his community mocked him, saying he was just a human like them. His own son refused to board the Ark and was drowned. When Allah revealed that no more people would believe, Nuh was instructed to build an Ark. The disbelievers laughed at the sight of a man building a massive ship on dry land, far from any water.
 
-    // Check if DeviceOrientationEvent exists
-    if (typeof DeviceOrientationEvent === 'undefined') {
-      setCompassAvailable(false);
-      return;
-    }
+Then came the flood — a torrent from the sky and a bursting of the earth. Everything was submerged except those on the Ark. Nuh\'s wife and one of his sons were among those who perished because they refused to believe. This heartbreaking story shows that even a prophet\'s own family is not guaranteed salvation — it depends on individual faith and choices.
 
-    // iOS 13+ requires permission
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      // Store permission request for button trigger
-      return;
-    }
+After the flood, the earth was purified, and those on the Ark began a new chapter of humanity. The story of Nuh is mentioned more times in the Quran than any other prophet, emphasizing the importance of patience, persistence in truth, and trusting in Allah\'s plan.`,
+    verses: ['Nuh 71:1-28', 'Hud 11:25-49', 'Al-Ankabut 29:14-15'],
+  },
+  {
+    id: 'ibrahim',
+    name: 'Ibrahim',
+    nameAr: 'إبراهيم',
+    title: 'The Friend of Allah (Khalilullah)',
+    era: 'Ancient Mesopotamia',
+    emoji: '🌟',
+    color: '#7D6608',
+    summary: 'The patriarch of prophets who smashed idols, was thrown into fire by Allah\'s command, built the Kaaba with his son Ismail, and was given the title "Friend of Allah."',
+    lessons: [
+      'True faith means standing alone for truth, even against the entire world',
+      'When you put your trust in Allah completely, the fire of difficulties becomes cool and peaceful',
+      'The sacrifices we make for Allah are never wasted',
+      'Tawheed (monotheism) is the foundation of all prophetic messages'
+    ],
+    story: `Ibrahim (Abraham, peace be upon him) is known as Khalilullah — the Friend of Allah. From a young age, he questioned the idol worship of his community, including his own father Azar who was an idol-maker. One night, he saw a star, then the moon, then the sun, and realized each set — they cannot be God. He declared his faith in the Lord of all that exists.
 
-    // Try to detect if compass data actually arrives
-    let gotData = false;
-    const timeout = setTimeout(() => {
-      if (!gotData) setCompassAvailable(false);
-    }, 2000);
+When his people were away for a festival, Ibrahim smashed all their idols except the largest one, leaving the axe on its shoulders. When confronted, he challenged them to ask the big idol — but they knew it could not speak. Enraged, they built a massive fire and threw Ibrahim into it. But Allah commanded: "O fire, be cool and safe for Ibrahim." The fire became a garden of peace for him.
 
-    const wrappedHandler = (e: DeviceOrientationEvent) => {
-      gotData = true;
-      clearTimeout(timeout);
-      handleOrientation(e);
-    };
+Allah tested Ibrahim with the ultimate sacrifice — a dream in which he was commanded to sacrifice his beloved son Ismail. Both father and son submitted willingly. At the last moment, Allah replaced Ismail with a ram, and this act of submission is commemorated every year during Eid al-Adha.
 
-    window.addEventListener('deviceorientation', wrappedHandler);
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('deviceorientation', wrappedHandler);
-    };
-  }, []);
+Together with his son Ismail, Ibrahim built the Kaaba in Makkah, establishing the holiest site in Islam. His legacy lives on in every prayer — we send blessings upon Ibrahim and his family in every salah. He is the father of many prophets including Ishaq, Yaqub, Yusuf, Musa, Isa, and Muhammad (peace be upon them all).`,
+    verses: ['Al-Baqarah 2:124-133', 'Al-Anbiya 21:51-70', 'As-Saffat 37:99-113'],
+  },
+  {
+    id: 'musa',
+    name: 'Musa',
+    nameAr: 'موسى',
+    title: 'The Liberator & Speaker to Allah',
+    era: 'Ancient Egypt',
+    emoji: '🔱',
+    color: '#6C3483',
+    summary: 'The prophet who confronted Pharaoh, split the sea, received the Torah on Mount Sinai, and spoke directly with Allah — the most mentioned prophet in the Quran.',
+    lessons: [
+      'Allah\'s plans are perfect — even being placed in a river as a baby was part of a divine plan',
+      'Never underestimate the power of dua — Musa\'s prayer before confronting Pharaoh is a timeless example',
+      'When the enemy seems too powerful, remember that Allah\'s power is greater',
+      'Patience and reliance on Allah overcome every obstacle'
+    ],
+    story: `Musa (Moses, peace be upon him) was born at a time when Pharaoh was killing every male child of the Israelites. His mother, inspired by Allah, placed the infant Musa in a basket on the Nile river. By Allah\'s will, the basket floated to Pharaoh\'s palace, where Pharaoh\'s wife Asiyah fell in love with the baby and convinced Pharaoh to spare him. Musa\'s own mother became his wet nurse by Allah\'s arrangement.
 
-  const requestCompassPermission = async () => {
-    try {
-      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-        const permission = await (DeviceOrientationEvent as any).requestPermission();
-        if (permission === 'granted') {
-          setCompassAvailable(true);
-          setCompassError(false);
-          window.addEventListener('deviceorientation', (e: DeviceOrientationEvent) => {
-            const ev = e as any;
-            let h: number;
-            if (ev.webkitCompassHeading !== undefined) {
-              h = ev.webkitCompassHeading;
-            } else if (ev.alpha !== undefined) {
-              h = (360 - ev.alpha) % 360;
-            } else {
-              h = 0;
-            }
-            setHeading(h);
-          });
-        } else {
-          setCompassError(true);
-          setCompassAvailable(false);
-        }
-      }
-    } catch {
-      setCompassError(true);
-      setCompassAvailable(false);
-    }
-  };
+Growing up in Pharaoh\'s palace, Musa once intervened in a fight and accidentally killed a man. Fearing for his life, he fled to Madyan, where he helped two women water their sheep and married one of them, Safura. While traveling with his family, he saw a burning bush — but it was not consumed. From it, Allah spoke to him directly, appointing him as a prophet and commanding him to confront Pharaoh.
 
-  const qiblaOffset = qiblaBearing !== null ? ((qiblaBearing - heading + 360) % 360) : 0;
+Musa returned to Egypt and confronted the most powerful tyrant in history, armed only with his brother Harun (Aaron) as support and Allah\'s promise. Pharaoh mocked him and challenged him to a contest of magicians. When Musa threw his staff, it became a massive serpent that swallowed all the magicians\' tricks. The magicians fell in prostration, declaring their belief in the Lord of Musa and Harun.
 
-  // Generate tick marks for the compass ring
-  const cardinalDirections = [
-    { label: 'N', angle: 0, size: 'text-lg font-bold' },
-    { label: 'E', angle: 90, size: 'text-sm font-semibold' },
-    { label: 'S', angle: 180, size: 'text-sm font-semibold' },
-    { label: 'W', angle: 270, size: 'text-sm font-semibold' },
-  ];
+When Pharaoh persisted in his tyranny, Allah sent nine devastating signs, culminating in the command for Musa to strike the sea with his staff. The sea split into twelve paths, and the Israelites crossed safely while Pharaoh and his army drowned. Musa then received the Torah at Mount Sinai, and his people witnessed incredible miracles — yet they repeatedly fell into disobedience. The story of Musa is a powerful reminder that faith requires constant patience and trust in Allah.`,
+    verses: ['Al-Qasas 28:1-43', 'Ta-Ha 20:1-82', 'Al-A\'raf 7:103-157'],
+  },
+  {
+    id: 'isa',
+    name: 'Isa',
+    nameAr: 'عيسى',
+    title: 'The Messiah, Son of Mary',
+    era: '1st Century CE',
+    emoji: '✝️',
+    color: '#922B21',
+    summary: 'Born miraculously without a father, given the Gospel (Injil), performed countless miracles by Allah\'s will, raised the dead, and was elevated to heaven — one of the greatest prophets of Islam.',
+    lessons: [
+      'Allah\'s power has no limits — He creates what He wills, as He wills',
+      'Miracles are signs from Allah, not something to be worshipped',
+      'A true servant of Allah is humble and attributes everything to the Creator',
+      'The truth stands clear from falsehood'
+    ],
+    story: `Isa (Jesus, peace be upon him) was born to Maryam (Mary), the greatest woman to ever live, through a miraculous birth without a father. When she was accused of immorality, the infant Isa spoke from the cradle, defending his mother\'s honor and declaring his prophethood.
 
-  // Degree marks every 30 degrees
-  const degreeMarks = Array.from({ length: 12 }, (_, i) => i * 30);
+Allah granted Isa numerous miracles: he healed the blind and the lepers, raised the dead by Allah\'s will, shaped a bird from clay and breathed life into it, and knew what people ate and stored in their homes. Despite these extraordinary signs, the majority of his people rejected him and plotted to kill him. But Allah raised him up to heaven and saved him from crucifixion.
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col items-center"
-      >
-        {/* Title */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Qibla Finder</h2>
-          <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Find the direction of the Kaaba</p>
-        </div>
+In Islam, Isa is a beloved prophet, not divine. The Quran affirms his virgin birth, his miracles, and his second coming before the Day of Judgment. He will return to defeat the Antichrist (Dajjal) and establish justice on earth. The story of Isa teaches us about the purity of Allah\'s power, the importance of submission to the Creator, and the truth of the Islamic message that all prophets taught the same fundamental truth: worship Allah alone.`,
+    verses: ['Maryam 19:16-36', 'Al-Ma\'idah 5:110-120', 'An-Nisa 4:156-159'],
+  },
+  {
+    id: 'muhammad',
+    name: 'Muhammad',
+    nameAr: 'محمد',
+    title: 'The Seal of Prophets (Khatam an-Nabiyyin)',
+    era: '570-632 CE',
+    emoji: '🕌',
+    color: '#0D4B3C',
+    summary: 'The final messenger sent to all of humanity, who received the Quran over 23 years, transformed Arabia from ignorance to light, and whose message continues to guide over 1.8 billion Muslims today.',
+    lessons: [
+      'The best example of character, compassion, justice, and leadership in human history',
+      'Even the most beloved prophet faced hardship, loss, and rejection — patience through trials is the way of the righteous',
+      'Knowledge, kindness, and wisdom are more powerful than any weapon',
+      'Every person can benefit from studying his life (Seerah) for practical guidance'
+    ],
+    story: `Muhammad (peace be upon him) was born in Makkah in 570 CE, orphaned at a young age, and raised by his grandfather and uncle. Known as "Al-Amin" (The Trustworthy) even before prophethood, he was a man of impeccable character. At the age of 40, while meditating in the Cave of Hira, the Angel Jibril appeared with the first revelation: "Read in the name of your Lord who created."
 
-        {!locationLoaded ? (
-          <div className="flex flex-col items-center py-12">
-            <Loader2 className="w-8 h-8 text-[#0D4B3C] dark:text-[#C8A951] animate-spin mb-3" />
-            <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">Detecting your location...</p>
+The early years were filled with persecution. The Muslims were boycotted, tortured, and eventually forced to migrate to Madinah in 622 CE (the Hijrah). In Madinah, the Prophet established a just society based on the principles of the Quran. Through diplomacy, wisdom, and when necessary, defensive warfare, the message of Islam spread rapidly.
+
+Despite facing assassination attempts, the loss of loved ones, wounds in battle, and betrayal by hypocrites, the Prophet never lost his compassion or his trust in Allah. He forgave his enemies after the conquest of Makkah, established rights for women, children, orphans, and the poor, and left behind a complete way of life that covers every aspect of human existence.
+
+He passed away in 632 CE, but his legacy — the Quran and his Sunnah (example) — continues to guide humanity. He is described in the Quran as a "mercy to all the worlds" and as having "an exalted standard of character." Studying his life is one of the most impactful ways to strengthen one\'s faith and become a better person.`,
+    verses: ['Al-Ahzab 33:21', 'Al-Anbiya 21:107', 'Al-Qalam 68:4'],
+  },
+  {
+    id: 'yusuf',
+    name: 'Yusuf',
+    nameAr: 'يوسف',
+    title: 'The Prophet of Beauty & Patience',
+    era: 'Ancient Canaan & Egypt',
+    emoji: '💎',
+    color: '#1B4F72',
+    summary: 'Thrown into a well by his own brothers, sold into slavery, falsely imprisoned, then rose to become the minister of Egypt — the Quran calls his story "the best of stories."',
+    lessons: [
+      'Sabr (patience) through hardship leads to unimaginable blessings',
+      'Forgiveness of those who wronged you is the highest form of strength',
+      'Taqwa (God-consciousness) protects you in every situation, even imprisonment',
+      'Beautiful character is more powerful than any worldly status'
+    ],
+    story: `Yusuf (Joseph, peace be upon him) was the beloved son of Prophet Yaqub (Jacob). His brothers, consumed by jealousy over their father\'s love for him and his prophetic dream, threw him into a well and told their father that a wolf had eaten him. A passing caravan found him and sold him into slavery in Egypt.
+
+In Egypt, he was purchased by a nobleman (Aziz), whose wife tried to seduce him. Yusuf refused, fearing Allah. When she falsely accused him, he was imprisoned. Despite years of wrongful imprisonment, Yusuf never lost hope in Allah and maintained his beautiful character. In prison, he interpreted dreams, which eventually led him to interpret the King\'s dream about seven years of plenty followed by seven years of famine.
+
+Impressed by his wisdom, the King appointed Yusuf as the Minister of Finance of Egypt. During the famine, Yusuf\'s brothers came to Egypt seeking food — not recognizing him. After testing them, he revealed his identity and forgave his brothers with extraordinary grace. His father Yaqub, who had gone blind from grief, had his sight restored upon receiving Yusuf\'s shirt.
+
+The Quran calls Surah Yusuf "Ahsan al-Qasas" — the best of stories — because it demonstrates how patience, faith, and reliance on Allah can transform the darkest circumstances into the most beautiful endings. It is a story of betrayal, temptation, imprisonment, and ultimately, triumph through faith.`,
+    verses: ['Yusuf 12:1-111', 'Ghafir 40:34-36'],
+  },
+  {
+    id: 'dawud',
+    name: 'Dawud',
+    nameAr: 'داوود',
+    title: 'The Prophet-King & Psalmist',
+    era: 'Ancient Jerusalem',
+    emoji: '👑',
+    color: '#5B2C6F',
+    summary: 'The king who defeated the mighty Goliath as a young boy, was given the Psalms (Zabur), possessed a voice that made mountains and birds glorify Allah, and was a master blacksmith.',
+    lessons: [
+      'True strength comes from faith, not physical power — a small boy with faith defeated a giant',
+      'Every talent is a gift from Allah and should be used in His service',
+      'Even great prophets make mistakes — what matters is sincere repentance',
+      'Justice must prevail regardless of a person\'s social status'
+    ],
+    story: `Dawud (David, peace be upon him) was a young shepherd boy when the army of Prophet Talut faced the terrifying warrior Jalut (Goliath). While the soldiers hesitated, young Dawud stepped forward with nothing but a sling and faith in Allah. With a single stone, he struck down Goliath and won the battle — proving that victory comes from Allah, not from numbers or strength.
+
+Allah granted Dawud the kingdom and prophethood. He was given the Zabur (Psalms), beautiful scriptures filled with wisdom and praise of Allah. His voice was so melodious that when he recited the Zabur, the mountains and birds would echo his glorification of Allah. He was also a skilled blacksmith who invented chainmail armor.
+
+Despite his greatness, Dawud was tested. He once judged a case without fully hearing both sides, and Allah corrected him with a powerful lesson about justice. The Quran also mentions a test in which Dawud was shown his own weakness and immediately repented. These stories show that even the greatest prophets were human, subject to mistakes, and their excellence lay in their quick return to Allah in repentance.
+
+His son Sulaiman (Solomon) inherited both the kingdom and prophethood. Together, they represent the golden age of prophetic kingdoms — ruling with justice, wisdom, and devotion to Allah.`,
+    verses: ['Al-Baqarah 2:251', 'Sad 38:17-30', 'Al-Anbiya 21:78-82'],
+  },
+  {
+    id: 'yunus',
+    name: 'Yunus',
+    nameAr: 'يونس',
+    title: 'The Prophet of the Whale (Dhu al-Nun)',
+    era: 'Ancient Nineveh',
+    emoji: '🐋',
+    color: '#1A5276',
+    summary: 'Fled from his mission, was swallowed by a great whale, prayed in the darkness of the ocean, and was cast ashore — his story teaches the power of repentance in the darkest moments.',
+    lessons: [
+      'Never give up hope in Allah\'s mercy, no matter how dark your situation',
+      'Running from responsibility only leads to greater hardship',
+      'The dua of Yunus in the whale is one of the most powerful supplications in Islam',
+      'Sincere repentance transforms even the worst mistakes into a means of drawing closer to Allah'
+    ],
+    story: `Yunus (Jonah, peace be upon him) was sent to the people of Nineveh, a city deep in sin and transgression. After calling them to Allah for some time without success, he grew frustrated and left the city without Allah\'s permission. He boarded a ship that was caught in a violent storm. The crew, following the tradition of casting lots to identify the cause, drew Yunus\'s name. Knowing he was the cause, he threw himself into the raging sea.
+
+Allah sent a great whale (or large fish) that swallowed Yunus whole. In the pitch darkness of the whale\'s belly, deep beneath the ocean waves, Yunus realized his mistake and turned to Allah with the most heartfelt prayer: "La ilaha illa Anta, Subhanaka inni kuntu minaz-zalimin" — "There is no deity except You; Glory be to You. Indeed, I have been among the wrongdoers."
+
+This sincere prayer, made from the most desperate circumstances, shook the heavens. Allah commanded the whale to cast Yunus onto the shore. Weak and sick, he rested under a gourd plant that Allah caused to grow over him for shade and healing. Meanwhile, the people of Nineveh had actually believed after Yunus left and were saved from punishment.
+
+When Yunus returned, he found his city transformed. The Prophet Muhammad (peace be upon him) said that no Muslim who recites the prayer of Yunus will ever be denied by Allah. This story is a beacon of hope for anyone who feels lost, overwhelmed, or distant from Allah.`,
+    verses: ['Yunus 10:98', 'Al-Anbiya 21:87-88', 'As-Saffat 37:139-148'],
+  },
+  {
+    id: 'ayub',
+    name: 'Ayub',
+    nameAr: 'أيوب',
+    title: 'The Prophet of Patience',
+    era: 'Ancient Syria',
+    emoji: '💪',
+    color: '#784212',
+    summary: 'Wealthy, healthy, and blessed — then lost everything: wealth, children, and health. Yet he never blamed Allah and remained patient until his trials became the source of his greatest blessings.',
+    lessons: [
+      'True patience (sabr) is not just enduring — it is being content with Allah\'s decree',
+      'Hardship is not a punishment — it is a test and potentially a purification',
+      'The greatest loss in this world means nothing compared to the reward of the hereafter',
+      'Always say "Inna lillahi wa inna ilayhi raji\'un" — we belong to Allah and to Him we return'
+    ],
+    story: `Ayub (Job, peace be upon him) was a wealthy man blessed with abundant livestock, many children, excellent health, and deep faith. Satan complained to Allah that Ayub only worshipped Him because of his blessings. Allah permitted a series of devastating tests to prove Satan wrong and elevate Ayub\'s rank.
+
+First, Ayub lost all his wealth. Then his children were killed when a building collapsed on them. Finally, he was struck with a severe illness that covered his entire body with painful sores. His community shunned him. Even his wife was pushed to her limits, though she stayed by his side. Through it all, Ayub never once complained or questioned Allah\'s wisdom. His response was always: "Indeed, adversity has touched me, and You are the Most Merciful of the merciful."
+
+After years of unwavering patience, Ayub made a beautiful dua to Allah. Allah responded by commanding him to strike the ground with his foot, and a spring of cool, healing water gushed forth. He drank from it and washed with it, and his body was completely restored. His wealth was returned multiplied, and he was blessed with new children even more beautiful than the ones he had lost.
+
+The story of Ayub is mentioned in the Quran as a timeless example: "Indeed, We found him patient — an excellent servant. Indeed, he was one who repeatedly turned back to Allah." His life teaches us that the deepest valleys of hardship are often the path to the highest peaks of spiritual growth.`,
+    verses: ['Sad 38:41-44', 'Al-Anbiya 21:83-84'],
+  },
+];
+
+function ProphetStories() {
+  const [selectedStory, setSelectedStory] = useState<ProphetStory | null>(null);
+  const [expandedLessons, setExpandedLessons] = useState(false);
+
+  if (selectedStory) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Back Button */}
+          <div className="px-4 pt-4 sm:px-6">
+            <button
+              onClick={() => { setSelectedStory(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="flex items-center gap-2 text-sm text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0D4B3C] dark:hover:text-[#C8A951] transition-colors mb-4"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back to Stories
+            </button>
           </div>
-        ) : qiblaBearing !== null ? (
-          <Card className="w-full max-w-sm overflow-hidden shadow-xl">
-            <div className="bg-gradient-to-br from-[#0D4B3C] via-[#0D4B3C] to-[#1B6B52] p-6">
-              {/* Compass */}
-              <div className="flex justify-center mb-6">
-                <div className="relative w-72 h-72 sm:w-80 sm:h-80">
-                  {/* Outer ring */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#0A3B2F] to-[#0D4B3C] border-4 border-[#C8A951]/30 shadow-2xl">
-                    {/* Compass rotation container */}
-                    <div
-                      className="absolute inset-0 transition-transform duration-300 ease-out"
-                      style={{ transform: compassAvailable ? `rotate(${-heading}deg)` : 'none' }}
-                    >
-                      {/* Degree marks */}
-                      {degreeMarks.map((deg) => (
-                        <div
-                          key={deg}
-                          className="absolute left-1/2 top-0 w-px h-full origin-center"
-                          style={{ transform: `rotate(${deg}deg)` }}
-                        >
-                          <div className={`absolute left-1/2 -translate-x-1/2 ${deg % 90 === 0 ? 'h-3 w-0.5 bg-[#C8A951]' : 'h-2 w-0.5 bg-white/30'}`}
-                            style={{ top: '6px' }} />
-                        </div>
-                      ))}
 
-                      {/* Cardinal directions */}
-                      {cardinalDirections.map(({ label, angle, size }) => (
-                        <div
-                          key={label}
-                          className="absolute left-1/2 top-0 origin-center"
-                          style={{ transform: `rotate(${angle}deg) translateY(-52px)` }}
-                        >
-                          <span
-                            className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${size} ${angle === 0 ? 'text-[#C8A951]' : 'text-white/80'}`}
-                            style={{ transform: `rotate(${-angle}deg) translateX(-50%)` }}
-                          >
-                            {label}
-                          </span>
-                        </div>
-                      ))}
+          {/* Hero Card */}
+          <div className="px-4 sm:px-6">
+            <Card className="overflow-hidden shadow-lg border-0">
+              <div className="h-2" style={{ background: `linear-gradient(to right, ${selectedStory.color}, ${selectedStory.color}88)` }} />
+              <div className="bg-gradient-to-br from-[#0D4B3C] to-[#0D4B3C]/90 dark:from-[#0D4B3C] dark:to-[#0D4B3C]/80 px-6 py-6">
+                <div className="text-center">
+                  <div className="text-5xl mb-3">{selectedStory.emoji}</div>
+                  <h2 className="text-2xl font-bold text-white">{selectedStory.nameAr}</h2>
+                  <p className="text-[#C8A951] font-semibold mt-1">{selectedStory.name}</p>
+                  <p className="text-white/60 text-sm mt-1">{selectedStory.title}</p>
+                  <Badge className="mt-3 bg-white/10 text-white/80 border-0 text-[10px]">{selectedStory.era}</Badge>
+                </div>
+              </div>
 
-                      {/* Qibla direction indicator on ring */}
-                      <div
-                        className="absolute left-1/2 top-0 origin-center"
-                        style={{ transform: `rotate(${qiblaBearing}deg) translateY(-44px)` }}
+              <CardContent className="p-5 sm:p-6">
+                {/* Summary */}
+                <p className="text-sm text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed mb-6">
+                  {selectedStory.summary}
+                </p>
+
+                {/* Story */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951] uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    The Story
+                  </h3>
+                  <div className="text-sm text-[#4A5568] dark:text-[#B0B8C0] leading-[1.9] space-y-4">
+                    {selectedStory.story.split('\n\n').map((paragraph, i) => (
+                      <p key={i}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lessons */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setExpandedLessons(!expandedLessons)}
+                    className="w-full flex items-center justify-between text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951] uppercase tracking-wider mb-3"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Star className="w-4 h-4" />
+                      Key Lessons
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expandedLessons ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {expandedLessons && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
                       >
-                        <span
-                          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl"
-                          style={{ transform: `rotate(${-qiblaBearing}deg) translateX(-50%)` }}
-                        >
-                          🕌
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Qibla gold arc from center */}
-                    {compassAvailable && (
-                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 300">
-                        <defs>
-                          <linearGradient id="qiblaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#C8A951" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#C8A951" stopOpacity="0.3" />
-                          </linearGradient>
-                        </defs>
-                        {/* Qibla direction line */}
-                        <line
-                          x1="150" y1="150"
-                          x2={150 + 95 * Math.sin((qiblaOffset) * Math.PI / 180)}
-                          y2={150 - 95 * Math.cos((qiblaOffset) * Math.PI / 180)}
-                          stroke="#C8A951"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeDasharray="8,4"
-                        />
-                        {/* Arrow at end of Qibla line */}
-                        <polygon
-                          points={(() => {
-                            const a = qiblaOffset * Math.PI / 180;
-                            const tipX = 150 + 95 * Math.sin(a);
-                            const tipY = 150 - 95 * Math.cos(a);
-                            const leftX = tipX - 12 * Math.sin(a - 0.4);
-                            const leftY = tipY + 12 * Math.cos(a - 0.4);
-                            const rightX = tipX - 12 * Math.sin(a + 0.4);
-                            const rightY = tipY + 12 * Math.cos(a + 0.4);
-                            return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
-                          })()}
-                          fill="#C8A951"
-                        />
-                      </svg>
+                        <div className="space-y-3">
+                          {selectedStory.lessons.map((lesson, i) => (
+                            <div key={i} className="flex gap-3 items-start p-3 rounded-xl bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#E5E1D8]/50 dark:border-[#2D3E34]/50">
+                              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: selectedStory.color + '20' }}>
+                                <span className="text-[10px] font-bold" style={{ color: selectedStory.color }}>{i + 1}</span>
+                              </div>
+                              <p className="text-sm text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed">{lesson}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
                     )}
-
-                    {/* Static Qibla line when no compass */}
-                    {!compassAvailable && (
-                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 300">
-                        <line
-                          x1="150" y1="150"
-                          x2={150 + 95 * Math.sin(qiblaBearing * Math.PI / 180)}
-                          y2={150 - 95 * Math.cos(qiblaBearing * Math.PI / 180)}
-                          stroke="#C8A951"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeDasharray="8,4"
-                        />
-                        <polygon
-                          points={(() => {
-                            const a = qiblaBearing * Math.PI / 180;
-                            const tipX = 150 + 95 * Math.sin(a);
-                            const tipY = 150 - 95 * Math.cos(a);
-                            const leftX = tipX - 12 * Math.sin(a - 0.4);
-                            const leftY = tipY + 12 * Math.cos(a - 0.4);
-                            const rightX = tipX - 12 * Math.sin(a + 0.4);
-                            const rightY = tipY + 12 * Math.cos(a + 0.4);
-                            return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
-                          })()}
-                          fill="#C8A951"
-                        />
-                      </svg>
-                    )}
-
-                    {/* Center dot */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                      <div className="w-6 h-6 rounded-full bg-[#C8A951] border-2 border-white shadow-lg flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white" />
+                  </AnimatePresence>
+                  {!expandedLessons && (
+                    <div className="space-y-3">
+                      <div className="flex gap-3 items-start p-3 rounded-xl bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#E5E1D8]/50 dark:border-[#2D3E34]/50">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: selectedStory.color + '20' }}>
+                          <span className="text-[10px] font-bold" style={{ color: selectedStory.color }}>1</span>
+                        </div>
+                        <p className="text-sm text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed">{selectedStory.lessons[0]}</p>
                       </div>
+                      {selectedStory.lessons.length > 1 && (
+                        <p className="text-xs text-[#9CA3AF] text-center">+ {selectedStory.lessons.length - 1} more lessons below</p>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Info Panel */}
-              <div className="text-center space-y-4">
-                {/* Qibla Direction */}
+                {/* Quranic References */}
                 <div>
-                  <p className="text-[#C8A951]/70 text-[10px] uppercase tracking-widest font-medium">Qibla Direction</p>
-                  <p className="text-[#C8A951] text-3xl font-bold">{Math.round(qiblaBearing)}°</p>
-                  <p className="text-white/50 text-xs">from North</p>
+                  <h3 className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951] uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Moon className="w-4 h-4" />
+                    Quran References
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedStory.verses.map((verse, i) => (
+                      <Badge key={i} variant="outline" className="text-xs border-[#C8A951]/30 text-[#0D4B3C] dark:text-[#C8A951] dark:border-[#C8A951]/30">
+                        {verse}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                {/* Distance */}
-                {distance !== null && (
-                  <div>
-                    <p className="text-white/40 text-[10px] uppercase tracking-widest font-medium">Distance to Kaaba</p>
-                    <p className="text-white text-xl font-semibold">{distance.toLocaleString()} km</p>
+          {/* Browse Other */}
+          <div className="px-4 py-4 sm:px-6">
+            <p className="text-xs text-[#9CA3AF] text-center mb-3">Read more stories</p>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
+              {PROPHET_STORIES.filter(s => s.id !== selectedStory.id).map(story => (
+                <button
+                  key={story.id}
+                  onClick={() => {
+                    setSelectedStory(story);
+                    setExpandedLessons(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white dark:bg-[#162118] border border-[#E5E1D8] dark:border-[#2D3E34] snap-start hover:border-[#C8A951]/50 transition-all"
+                >
+                  <span className="text-xl">{story.emoji}</span>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-[#0D4B3C] dark:text-[#C8A951]">{story.name}</p>
+                    <p className="text-[10px] text-[#9CA3AF]">{story.nameAr}</p>
                   </div>
-                )}
-
-                {/* Divider */}
-                <div className="w-16 h-px bg-[#C8A951]/30 mx-auto" />
-
-                {/* Compass Status */}
-                {compassAvailable ? (
-                  <div>
-                    <p className="text-green-400 text-xs flex items-center justify-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-green-400 inline-block animate-pulse" />
-                      Compass active — hold device level
-                    </p>
-                  </div>
-                ) : compassError ? (
-                  <div>
-                    <p className="text-red-400 text-xs flex items-center justify-center gap-1.5">
-                      Compass permission denied
-                    </p>
-                    <button
-                      onClick={requestCompassPermission}
-                      className="mt-2 px-4 py-1.5 rounded-lg bg-[#C8A951]/20 text-[#C8A951] text-xs font-medium hover:bg-[#C8A951]/30 transition-colors"
-                    >
-                      Enable Compass
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-white/50 text-xs flex items-center justify-center gap-1.5">
-                      <Compass className="w-3.5 h-3.5" />
-                      Compass not available on this device
-                    </p>
-                    <p className="text-white/30 text-[10px] mt-1">
-                      Point your phone toward {Math.round(qiblaBearing)}° from North
-                    </p>
-                  </div>
-                )}
-              </div>
+                </button>
+              ))}
             </div>
-          </Card>
-        ) : null}
-      </motion.div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Story List View
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2 sm:px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-xl bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
+              <ScrollText className="w-5 h-5 text-[#0D4B3C] dark:text-[#C8A951]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Stories of the Prophets</h2>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Qisas al-Anbiya — Timeless lessons from the greatest lives</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Story Cards Grid */}
+      <div className="px-4 pb-6 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {PROPHET_STORIES.map((story, index) => (
+            <motion.div
+              key={story.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.4 }}
+            >
+              <button
+                onClick={() => {
+                  setSelectedStory(story);
+                  setExpandedLessons(false);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="w-full text-left"
+              >
+                <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border border-[#E5E1D8]/50 dark:border-[#2D3E34]/50 hover:border-[#C8A951]/40 dark:hover:border-[#C8A951]/40 cursor-pointer group h-full">
+                  <div className="h-1.5" style={{ background: `linear-gradient(to right, ${story.color}, ${story.color}66)` }} />
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                        style={{ backgroundColor: story.color + '15' }}
+                      >
+                        {story.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-bold text-[#0D4B3C] dark:text-[#C8A951] text-sm">{story.name}</h3>
+                          <span className="text-xs text-[#C8A951]/60 font-arabic">{story.nameAr}</span>
+                        </div>
+                        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-medium mb-2">{story.title}</p>
+                        <p className="text-xs text-[#9CA3AF] dark:text-[#6B7280] line-clamp-2 leading-relaxed">{story.summary}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <Badge variant="outline" className="text-[9px] border-[#E5E1D8] dark:border-[#2D3E34] text-[#9CA3AF]">{story.era}</Badge>
+                      <span className="text-[10px] text-[#C8A951] font-medium group-hover:translate-x-0.5 transition-transform">Read story →</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── Bookmarks View ───────────────────────────────────────
+
 
 function BookmarksView({
   bookmarks,

@@ -236,3 +236,80 @@ Stage Summary:
 - File grew from ~5418 to ~5758 lines
 - All 7 tabs: Quran, Listen, My Space, Duas, Qibla, Saved, Settings
 - Build verified: Next.js 16.1.3 Turbopack, compiles successfully
+---
+Task ID: 1
+Agent: Main Agent
+Task: Security hardening and SEO optimization for Wird Islamic web app
+
+Work Log:
+- Read and audited entire codebase for security vulnerabilities and SEO gaps
+- Created src/middleware.ts with comprehensive security headers:
+  - Content Security Policy (CSP) with strict directives
+  - X-Frame-Options: DENY (clickjacking prevention)
+  - X-Content-Type-Options: nosniff (MIME sniffing prevention)
+  - X-XSS-Protection: 1; mode=block
+  - Referrer-Policy: strict-origin-when-cross-origin
+  - Permissions-Policy (restricts camera, microphone, payment, etc.)
+  - Strict-Transport-Security (HSTS) for HTTPS
+  - Cross-Origin-Opener/Embedder/Resource-Policy headers
+  - X-Powered-By removal (server fingerprint prevention)
+  - Cache-Control: no-store for API routes
+- Created src/components/structured-data.tsx with JSON-LD schemas:
+  - WebApplication schema
+  - Organization schema
+  - WebSite schema with SearchAction
+  - SoftwareApplication schema with AggregateRating
+- Enhanced src/app/layout.tsx with:
+  - metadataBase for absolute URL resolution
+  - Template-based title (%s | Wird)
+  - Expanded keywords (25+ targeted keywords)
+  - formatDetection (disable auto-detection of phone/email)
+  - Comprehensive robots config (googleBot max-snippet, max-image-preview)
+  - Canonical URL and alternate language hreflang tags
+  - Full OpenGraph with image, siteName, locale
+  - Twitter Card meta tags
+  - Preconnect/DNS prefetch for external domains
+  - Adaptive themeColor (light/dark)
+  - maximumScale: 5 (was 1, better accessibility)
+  - Font display: swap for better loading
+- Created src/app/sitemap.ts:
+  - Static pages (6 priority-ranked pages)
+  - Dynamic surah pages (114 surah-specific URLs)
+  - changeFrequency and priority metadata
+- Created src/app/robots.ts:
+  - Dynamic generation with sitemap reference
+  - Disallow /api/ for all bots
+  - Allow full crawling for main pages
+- Created src/app/not-found.tsx:
+  - Custom 404 page with Islamic design theme
+  - noindex meta tag (prevents 404 pages in search index)
+  - Inspirational Quran verse
+- Secured src/app/api/route.ts:
+  - IP-based rate limiting (60 req/min with auto-cleanup)
+  - CORS with origin whitelist
+  - OPTIONS preflight handler
+  - Cache-Control: no-store
+  - 429 rate limit response
+- Hardened next.config.ts:
+  - reactStrictMode: true (was false, catches bugs)
+  - Security headers config (X-Powered-By removal)
+  - Image remote patterns (only trusted CDNs)
+  - SEO redirects (/home -> /, /index.html -> /)
+- Updated public/sw.js:
+  - Cache version bump to wird-v4
+  - URL scheme validation (blocks data:/javascript: protocols)
+  - Network-only for geolocation API (privacy protection)
+  - Cache size pruning (MAX_CACHE_ENTRIES = 500)
+  - Extended cache-first to /icon- paths
+  - Removed old static robots.txt (replaced by dynamic generation)
+- Fixed page.tsx localStorage security:
+  - Wrapped 4 unwrapped localStorage calls in try/catch
+  - Prevents crashes in private browsing, full storage, disabled cookies
+
+Stage Summary:
+- 10 files created or modified
+- Build verified successful (next build passes)
+- All security headers active via middleware
+- SEO fully optimized with structured data, sitemap, robots, OG/Twitter meta
+- API route secured with rate limiting and CORS
+- Service worker hardened with URL validation and cache limits

@@ -982,11 +982,13 @@ export default function Home() {
   // Read persisted theme on mount (avoids hydration mismatch)
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('wird-theme');
-    if (saved === 'dark') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
+    try {
+      const saved = localStorage.getItem('wird-theme');
+      if (saved === 'dark') {
+        setIsDark(true);
+        document.documentElement.classList.add('dark');
+      }
+    } catch { /* storage unavailable */ }
   }, []);
 
   // Persist bookmarks
@@ -1002,10 +1004,10 @@ export default function Home() {
       const next = !prev;
       if (next) {
         document.documentElement.classList.add('dark');
-        localStorage.setItem('wird-theme', 'dark');
+        try { localStorage.setItem('wird-theme', 'dark'); } catch { /* storage unavailable */ }
       } else {
         document.documentElement.classList.remove('dark');
-        localStorage.setItem('wird-theme', 'light');
+        try { localStorage.setItem('wird-theme', 'light'); } catch { /* storage unavailable */ }
       }
       return next;
     });
@@ -1014,7 +1016,7 @@ export default function Home() {
   // Font size change
   const changeFontSize = useCallback((size: 'sm' | 'md' | 'lg') => {
     setArabicFontSize(size);
-    localStorage.setItem('wird-font-size', size);
+    try { localStorage.setItem('wird-font-size', size); } catch { /* storage unavailable */ }
   }, []);
 
   const addBookmark = useCallback((item: BookmarkItem) => {

@@ -1205,9 +1205,7 @@ export default function Home() {
       {showInstallBanner && installPrompt && !installDismissed && (
         <div className="fixed bottom-16 left-0 right-0 z-50 p-3 safe-area-bottom install-banner-animate">
           <div className="max-w-lg mx-auto bg-white dark:bg-[#162118] rounded-2xl shadow-xl border border-[#E5E1D8] dark:border-[#2D3E34] p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">🌙</span>
-            </div>
+            <img src="/icon-192.png" alt="Wird" className="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird</p>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] truncate">Add to home screen for the best experience</p>
@@ -1266,10 +1264,7 @@ function IslamicHeader({
         {/* Top Row */}
         <div className="flex items-center justify-between h-14">
           <div className="flex items-center gap-2.5">
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <Moon className="w-7 h-7 text-[#C8A951] absolute" />
-              <Star className="w-3 h-3 text-[#C8A951] absolute -right-0.5 -top-0.5" />
-            </div>
+            <img src="/icon-192.png" alt="Wird" className="w-9 h-9 rounded-lg object-cover shadow-sm" />
             <div>
               <h1 className="text-lg font-bold text-white tracking-wide">ورد</h1>
               <p className="text-[10px] text-[#C8A951]/80 -mt-1 font-medium tracking-wider uppercase">Wird</p>
@@ -4845,9 +4840,7 @@ function SettingsView({
       {/* Install App */}
       <Card className="border border-[#C8A951]/30 bg-[#C8A951]/5">
         <CardContent className="p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#0D4B3C] flex items-center justify-center flex-shrink-0">
-            <span className="text-lg">📱</span>
-          </div>
+          <img src="/icon-192.png" alt="Wird" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird App</p>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Add to home screen for quick access, or use your browser's menu → &quot;Add to Home Screen&quot; or &quot;Install App&quot;</p>

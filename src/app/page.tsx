@@ -963,14 +963,14 @@ export default function Home() {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
-      const saved = localStorage.getItem('noor-bookmarks');
+      const saved = localStorage.getItem('wird-bookmarks');
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
   const [arabicFontSize, setArabicFontSize] = useState<'sm' | 'md' | 'lg'>(() => {
     if (typeof window === 'undefined') return 'md';
     try {
-      const saved = localStorage.getItem('noor-font-size');
+      const saved = localStorage.getItem('wird-font-size');
       if (saved === 'sm' || saved === 'md' || saved === 'lg') return saved;
     } catch { /* ignore */ }
     return 'md';
@@ -981,7 +981,7 @@ export default function Home() {
   // Read persisted theme on mount (avoids hydration mismatch)
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('noor-theme');
+    const saved = localStorage.getItem('wird-theme');
     if (saved === 'dark') {
       setIsDark(true);
       document.documentElement.classList.add('dark');
@@ -991,7 +991,7 @@ export default function Home() {
   // Persist bookmarks
   useEffect(() => {
     try {
-      localStorage.setItem('noor-bookmarks', JSON.stringify(bookmarks));
+      localStorage.setItem('wird-bookmarks', JSON.stringify(bookmarks));
     } catch { /* ignore */ }
   }, [bookmarks]);
 
@@ -1001,10 +1001,10 @@ export default function Home() {
       const next = !prev;
       if (next) {
         document.documentElement.classList.add('dark');
-        localStorage.setItem('noor-theme', 'dark');
+        localStorage.setItem('wird-theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
-        localStorage.setItem('noor-theme', 'light');
+        localStorage.setItem('wird-theme', 'light');
       }
       return next;
     });
@@ -1013,7 +1013,7 @@ export default function Home() {
   // Font size change
   const changeFontSize = useCallback((size: 'sm' | 'md' | 'lg') => {
     setArabicFontSize(size);
-    localStorage.setItem('noor-font-size', size);
+    localStorage.setItem('wird-font-size', size);
   }, []);
 
   const addBookmark = useCallback((item: BookmarkItem) => {
@@ -1060,7 +1060,7 @@ export default function Home() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(() => {
     if (typeof window === 'undefined') return false;
-    try { return localStorage.getItem('noor-install-dismissed') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('wird-install-dismissed') === 'true'; } catch { return false; }
   });
 
   useEffect(() => {
@@ -1068,7 +1068,7 @@ export default function Home() {
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
-      const dismissed = localStorage.getItem('noor-install-dismissed');
+      const dismissed = localStorage.getItem('wird-install-dismissed');
       if (dismissed !== 'true') {
         setTimeout(() => setShowInstallBanner(true), 3000);
       }
@@ -1085,7 +1085,7 @@ export default function Home() {
     await installPrompt.prompt();
     const result = await installPrompt.userChoice;
     if (result.outcome === 'accepted') {
-      showToast('Noor installed successfully! 🎉');
+      showToast('Wird installed successfully! 🎉');
     }
     setInstallPrompt(null);
     setShowInstallBanner(false);
@@ -1094,7 +1094,7 @@ export default function Home() {
   const dismissInstall = useCallback(() => {
     setShowInstallBanner(false);
     setInstallDismissed(true);
-    try { localStorage.setItem('noor-install-dismissed', 'true'); } catch {}
+    try { localStorage.setItem('wird-install-dismissed', 'true'); } catch {}
   }, []);
 
   // Navigate from My Space to Listen tab with a specific surah
@@ -1209,7 +1209,7 @@ export default function Home() {
               <span className="text-2xl">🌙</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Install Noor</p>
+              <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird</p>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] truncate">Add to home screen for the best experience</p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
@@ -1271,8 +1271,8 @@ function IslamicHeader({
               <Star className="w-3 h-3 text-[#C8A951] absolute -right-0.5 -top-0.5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-wide">نـور</h1>
-              <p className="text-[10px] text-[#C8A951]/80 -mt-1 font-medium tracking-wider uppercase">Noor</p>
+              <h1 className="text-lg font-bold text-white tracking-wide">ورد</h1>
+              <p className="text-[10px] text-[#C8A951]/80 -mt-1 font-medium tracking-wider uppercase">Wird</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -4075,7 +4075,7 @@ function DailyMotivation({
   const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
-      const cached = localStorage.getItem('noor-location');
+      const cached = localStorage.getItem('wird-location');
       if (cached) return JSON.parse(cached);
     } catch {}
     return null;
@@ -4083,7 +4083,7 @@ function DailyMotivation({
   const [locationName, setLocationName] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
-      return localStorage.getItem('noor-location-name');
+      return localStorage.getItem('wird-location-name');
     } catch { return null; }
   });
   const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
@@ -4106,7 +4106,7 @@ function DailyMotivation({
           const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setLocation(loc);
           setLocationDenied(false);
-          try { localStorage.setItem('noor-location', JSON.stringify(loc)); } catch {}
+          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
           // Reverse geocode to get location name
           (async () => {
             try {
@@ -4115,7 +4115,7 @@ function DailyMotivation({
                 const geoData = await geoRes.json();
                 const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
                 setLocationName(name);
-                try { localStorage.setItem('noor-location-name', name); } catch {}
+                try { localStorage.setItem('wird-location-name', name); } catch {}
               }
             } catch {}
           })();
@@ -4134,8 +4134,8 @@ function DailyMotivation({
   }, [location]);
 
   const refreshLocation = useCallback(() => {
-    try { localStorage.removeItem('noor-location'); } catch {}
-    try { localStorage.removeItem('noor-location-name'); } catch {}
+    try { localStorage.removeItem('wird-location'); } catch {}
+    try { localStorage.removeItem('wird-location-name'); } catch {}
     setLocation(null);
     setLocationName(null);
     setPrayerTimes(null);
@@ -4190,7 +4190,7 @@ function DailyMotivation({
         });
         // Cache in localStorage
         try {
-          localStorage.setItem('noor-daily-verse', JSON.stringify({
+          localStorage.setItem('wird-daily-verse', JSON.stringify({
             data: { arabic: arabic.text, english: islamifyNames(english.text), surahName: islamifyNames(english.surah.englishName), surahNameAr: english.surah.name, ayahNumber: english.numberInSurah, surahNumber: english.surah.number },
             date: new Date().toDateString(),
           }));
@@ -4205,7 +4205,7 @@ function DailyMotivation({
   useEffect(() => {
     // Check cache first
     try {
-      const cached = localStorage.getItem('noor-daily-verse');
+      const cached = localStorage.getItem('wird-daily-verse');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.date === new Date().toDateString()) {
@@ -4849,7 +4849,7 @@ function SettingsView({
             <span className="text-lg">📱</span>
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Install Noor App</p>
+            <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird App</p>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Add to home screen for quick access, or use your browser's menu → &quot;Add to Home Screen&quot; or &quot;Install App&quot;</p>
           </div>
         </CardContent>
@@ -4936,13 +4936,13 @@ function SettingsView({
               <Info className="w-5 h-5 text-[#0D4B3C] dark:text-[#C8A951]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">About Noor</p>
+              <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">About Wird</p>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Version 1.0.0</p>
             </div>
           </div>
           <div className="space-y-3 text-sm text-[#4A5568] dark:text-[#9CA3AF]">
             <p>
-              <strong className="text-[#0D4B3C] dark:text-[#C8A951]">نـور (Noor)</strong> means &ldquo;Light&rdquo; in Arabic.
+              <strong className="text-[#0D4B3C] dark:text-[#C8A951]">ورد (Wird)</strong> means &ldquo;Daily Portion&rdquo; or &ldquo;Spiritual Practice&rdquo; in Arabic.
               It is a Faith-Tech application designed to bring the beauty of the Quran closer to you.
             </p>
             <p>

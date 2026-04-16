@@ -1,5 +1,5 @@
-const CACHE_NAME = 'noor-v2';
-const AUDIO_CACHE = 'noor-audio-v2';
+const CACHE_NAME = 'wird-v3';
+const AUDIO_CACHE = 'wird-audio-v3';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [

@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Noor — Quran Reader & Daily Motivation",
+  title: "Wird — Quran, Duas & Daily Practice",
   description:
-    "A beautiful Islamic Faith-Tech application featuring a Quran Reader with word-for-word translation, listening mode, daily duas, and spiritual motivation.",
+    "Wird — Your daily Islamic companion for reading the Quran, listening to recitations, daily duas, prayer times, and spiritual motivation.",
   keywords: [
     "Quran",
     "Islam",
-    "Noor",
+    "Wird",
     "Quran Reader",
     "Daily Dua",
     "Arabic",
@@ -28,16 +28,16 @@ export const metadata: Metadata = {
     "Listening",
     "Offline Quran",
   ],
-  authors: [{ name: "Noor App" }],
+  authors: [{ name: "Wird" }],
   icons: {
     icon: "/icon-192.png",
     apple: "/icon-192.png",
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Noor — Quran Reader & Daily Motivation",
+    title: "Wird — Quran, Duas & Daily Practice",
     description:
-      "A beautiful Islamic Faith-Tech application for reading the Quran with word-for-word translation, listening, and daily duas.",
+      "Your daily Islamic companion for reading the Quran, listening to recitations, daily duas, and spiritual motivation.",
     type: "website",
   },
 };
@@ -66,9 +66,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Noor" />
+        <meta name="apple-mobile-web-app-title" content="Wird" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="application-name" content="Noor" />
+        <meta name="application-name" content="Wird" />
         <meta name="msapplication-TileColor" content="#0D4B3C" />
         <script
           dangerouslySetInnerHTML={{

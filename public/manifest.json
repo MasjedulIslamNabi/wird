@@ -1,7 +1,7 @@
 {
-  "name": "Noor — Quran & Daily Motivation",
-  "short_name": "Noor",
-  "description": "A beautiful Islamic app for reading Quran, listening to recitations, daily duas, prayer times, and spiritual motivation.",
+  "name": "Wird — Quran, Duas & Daily Practice",
+  "short_name": "Wird",
+  "description": "Wird — Your daily Islamic companion for reading Quran, listening to recitations, daily duas, prayer times, and spiritual motivation.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

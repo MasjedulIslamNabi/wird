@@ -5041,6 +5041,282 @@ After years of unwavering patience, Ayub made a beautiful dua to Allah. Allah re
 The story of Ayub is mentioned in the Quran as a timeless example: "Indeed, We found him patient — an excellent servant. Indeed, he was one who repeatedly turned back to Allah." His life teaches us that the deepest valleys of hardship are often the path to the highest peaks of spiritual growth.`,
     verses: ['Sad 38:41-44', 'Al-Anbiya 21:83-84'],
   },
+  {
+    id: 'ishaq',
+    name: 'Ishaq',
+    nameAr: 'إسحاق',
+    title: 'The Son of Promise',
+    era: 'Ancient Canaan',
+    emoji: '🏕️',
+    color: '#786115',
+    summary: 'The miracle child born to Ibrahim and Sarah in their old age, whose birth fulfilled Allah\'s promise and established the lineage of many prophets including Yaqub, Yusuf, Musa, Isa, and Muhammad.',
+    lessons: [
+      'Allah\'s promises always come true — even when they seem impossible',
+      'Nothing is too difficult for Allah — He can bless at any age',
+      'Gratitude for Allah\'s blessings deepens faith and attracts more blessings',
+      'Every child is a trust from Allah and a potential source of goodness'
+    ],
+    story: `Ishaq (Isaac, peace be upon him) was born to Ibrahim and his wife Sarah when both were well beyond the age of having children. Sarah, who had been childless her entire life, laughed in astonishment when the angels brought the news that she would bear a son. Allah said: "Do you wonder at the decree of Allah? The mercy of Allah and His blessings are upon you, O people of the house."
+
+The birth of Ishaq was a testament to Allah\'s power over all things. He was the fulfillment of a divine promise made years earlier, when Ibrahim was still childless. His name, Ishaq, means "laughter" — a reminder of Sarah\'s initial disbelief that transformed into overwhelming joy.
+
+Ishaq grew up to be a righteous man and a prophet. He continued the mission of his father Ibrahim, calling people to the worship of Allah alone. He married Rebekah (Rifqah) and was blessed with twin sons: Isa (Esau) and Yaqub (Jacob). Even before their birth, Allah revealed that from Yaqub\'s lineage would come a great nation.
+
+Ishaq lived a life of devotion and gratitude. He is mentioned in the Quran alongside Ibrahim and Yaqub as men of excellence and wisdom. His story reminds us that Allah\'s timing is perfect, and His plans unfold in ways we cannot imagine. The lineage of prophets that came through Ishaq — including Yaqub, Yusuf, Musa, Isa, and Muhammad (peace be upon them all) — shows how one miracle birth can change the course of history.`,
+    verses: ['Hud 11:69-73', 'As-Saffat 37:112-113', 'Maryam 19:49'],
+  },
+  {
+    id: 'yaqub',
+    name: 'Yaqub',
+    nameAr: 'يعقوب',
+    title: 'Israel — The Father of the Twelve Tribes',
+    era: 'Ancient Canaan',
+    emoji: '🏕️',
+    color: '#1B4F72',
+    summary: 'The prophet who endured decades of grief over his lost son Yusuf, never losing hope in Allah, until the day he received his son\'s shirt and his sight was restored — a masterclass in patience and parental love.',
+    lessons: [
+      'A parent\'s love combined with faith in Allah can endure any separation',
+      'Tears shed in sorrow and patience are never wasted — Allah sees everything',
+      'Never despair of Allah\'s mercy — He can reunite what seems lost forever',
+      'Family bonds strengthened by faith are the strongest bonds on earth'
+    ],
+    story: `Yaqub (Jacob, peace be upon him), also known as Israel, was the son of Ishaq and the grandson of Ibrahim. He was blessed with twelve sons who would become the founders of the twelve tribes of Israel. From a young age, Yaqub recognized that his son Yusuf was special — he had seen signs of prophethood in him.
+
+When Yusuf\'s brothers, consumed by jealousy, threw him into a well and claimed a wolf had eaten him, Yaqub was devastated. But unlike most grieving parents, his response was rooted in faith: "Rather, your souls have enticed you to something, so patience is most fitting. Perhaps Allah will bring them all to me. Indeed, He is the Knowing, the Wise." He turned his grief into patience, and his patience into a relationship with Allah.
+
+The Quran describes Yaqub\'s grief in moving detail: "And he turned away from them and said, 'Oh, my sorrow over Yusuf,' and his eyes became white from grief, and he fell into silent melancholy." For years, he mourned his son, yet he never blamed Allah or lost his faith. When his other sons brought Yusuf\'s shirt and placed it over his face, his sight was miraculously restored. He recognized the signs immediately.
+
+Yaqub\'s story is inseparable from Yusuf\'s — together they form the most emotionally powerful narrative in the Quran. His life teaches us that grief and faith can coexist, that tears are not weakness, and that Allah\'s mercy comes in ways we cannot predict. Before his death in Egypt, Yaqub advised his sons to maintain their faith, and they responded with the words that Muslims still recite today: "We will worship your God, the God of your fathers Ibrahim, Ismail, and Ishaq — one God. And we are Muslims in submission to Him."`,
+    verses: ['Yusuf 12:4-18', 'Yusuf 12:83-86', 'Yusuf 12:101', 'Al-Baqarah 2:132-133'],
+  },
+  {
+    id: 'sulaiman',
+    name: 'Sulaiman',
+    nameAr: 'سليمان',
+    title: 'The Wise King & Master of Jinn',
+    era: 'Ancient Jerusalem',
+    emoji: '🏛️',
+    color: '#4A235A',
+    summary: 'Granted wisdom, a kingdom unlike any other, the ability to speak with animals, command over jinn and wind, and the construction of the magnificent Masjid al-Aqsa — the wealthiest and wisest king to ever live.',
+    lessons: [
+      'Wisdom is the greatest gift — it is better than any worldly possession',
+      'Power and wealth are tests — Sulaiman\'s humility in prayer shows true greatness',
+      'True leadership is about serving others with justice and compassion',
+      'Every blessing is from Allah and should be used in His service'
+    ],
+    story: `Sulaiman (Solomon, peace be upon him) inherited the kingdom and prophethood from his father Dawud. As a young man, he once prayed: "My Lord, forgive me and grant me a kingdom such as will not belong to anyone after me. Indeed, You are the Bestower." Allah granted him an empire of unparalleled splendor.
+
+Sulaiman understood the language of birds and animals. His army included men, jinn, and birds — all under his command by Allah\'s will. The wind was made subservient to him, blowing at his command to any land he wished. He could marshal jinn to build monuments, dive for pearls, and perform extraordinary tasks. His throne was magnificent, and his kingdom was the most prosperous in history.
+
+One of the most remarkable stories involves the Queen of Sheba (Bilqis). When Sulaiman learned of her magnificent but idolatrous kingdom, he sent a letter inviting her to submit to Allah. She responded with gifts, but Sulaiman refused them, saying Allah had given him far more. When she arrived, Sulaiman had her throne transported to his palace before she arrived — a demonstration of Allah\'s power. When she entered and saw what appeared to be her own throne, she said: "It is as though it is it." Upon entering the palace with a floor of transparent glass that she mistook for water, she submitted to Allah.
+
+Sulaiman\'s most important achievement was the construction of Masjid al-Aqsa in Jerusalem, one of the holiest sites in Islam. Despite his extraordinary power, he remained a devoted servant of Allah. The Quran records his humble prayer: "My Lord, cause me to be grateful for Your favor which You have bestowed upon me and upon my parents and to do righteousness of which You approve. And admit me by Your mercy into the ranks of Your righteous servants."`,
+    verses: ['Sad 38:30-40', 'An-Naml 27:15-44', 'Al-Anbiya 21:78-82', 'Saba 34:12-14'],
+  },
+  {
+    id: 'lut',
+    name: 'Lut',
+    nameAr: 'لوط',
+    title: 'The Prophet Who Grieved for His People',
+    era: 'Ancient Sodom & Gomorrah',
+    emoji: '🌋',
+    color: '#943126',
+    summary: 'The nephew of Ibrahim who was sent to the people of Sodom to call them away from immorality. When they refused, Allah destroyed the cities with a rain of stones, saving only Lut and his believing family members.',
+    lessons: [
+      'Always enjoin good and forbid evil, even when society mocks you',
+      'No society survives that normalizes immorality and injustice',
+      'A prophet\'s concern for his people\'s guidance is genuine, even when rejected',
+      'The righteous are never punished alongside the wicked'
+    ],
+    story: `Lut (Lot, peace be upon him) was a prophet sent to the people of Sodom and Gomorrah, cities that had descended into unprecedented immorality. He was the nephew of Ibrahim and had initially traveled with him before being appointed to his own mission among these people.
+
+Lut called his people to worship Allah alone and abandon their shameful practices, saying: "Do you commit such immorality as no one has preceded you with from among the worlds? Indeed, you approach men with desire instead of women. Rather, you are a transgressing people." But they mocked him and persisted in their ways. They even threatened to expel him from the city.
+
+When the situation became unbearable, Lut prayed to Allah for help. Allah sent His angels in the form of handsome young men. When the people of Sodom saw them, they rushed to Lut\'s house with evil intentions. Lut was deeply distressed and said: "If only I had against you the power of resistance or could take refuge in a strong support." The angels revealed their true nature and instructed Lut to leave the city with his family before dawn, warning them not to look back.
+
+At sunrise, Allah overturned the cities, raining down upon them stones of baked clay. Lut\'s wife, who supported the wrongdoers, looked back and was among those destroyed. The Quran describes the punishment as a lasting sign for those who reflect. The site of these cities, near the Dead Sea, stands as a reminder to this day. Lut\'s story is told repeatedly in the Quran as a warning against immorality and a reminder that Allah\'s justice is certain.`,
+    verses: ['Al-A\'raf 7:80-84', 'Hud 11:77-83', 'Al-Qamar 54:33-40', 'Ash-Shu\'ara 26:160-175'],
+  },
+  {
+    id: 'hud',
+    name: 'Hud',
+    nameAr: 'هود',
+    title: 'The Prophet of the Ancient Ad',
+    era: 'Ancient Arabia (Ahqaf)',
+    emoji: '🏜️',
+    color: '#7E5109',
+    summary: 'Sent to the powerful Ad people — a nation of immense strength and advanced architecture who had become arrogant. When they rejected his message, Allah destroyed them with a devastating windstorm lasting eight days and seven nights.',
+    lessons: [
+      'Physical strength and wealth mean nothing without faith and humility',
+      'Arrogance is the first step toward destruction',
+      'Every nation that rejects truth after receiving clear signs faces consequences',
+      'Standing alone for truth, against an entire nation, is the hallmark of a prophet'
+    ],
+    story: `Hud (peace be upon him) was sent to the people of Ad, a powerful ancient tribe that inhabited the region of Al-Ahqaf in southern Arabia. They were physically enormous people who built magnificent palaces and towering structures. Their civilization was incredibly advanced for its time, and they had been blessed with great wealth, fertile land, and strength.
+
+Despite these blessings, the Ad people had fallen into arrogance and idol worship. They believed their physical power made them invincible. Hud, who was himself from their tribe, called them to worship Allah alone and be grateful for His blessings. He warned them: "Remember the favors He has bestowed upon you. Is there any creator other than Allah who provides for you from the heaven and earth?"
+
+The elite of Ad responded with mockery: "Who is greater in strength than us?" They could not fathom that the God who created them could also hold them accountable. Hud replied with wisdom: "He who created you and raised you from the dust and then made you a complete man — perhaps you will understand."
+
+When they persisted in their arrogance, Allah sent a devastating punishment. The Quran describes it as "a furious wind with severe punishment" that lasted eight days and seven nights. It uprooted people as if they were hollow trunks of palm trees. Nothing remained of this once-great civilization. Surah Al-Ahqaf describes their destruction as a sign: "So We sent against them a furious wind in days of misfortune, that We might make them taste the punishment of disgrace in the worldly life. But the punishment of the Hereafter is more disgracing."
+
+The story of Hud teaches us that no civilization, however powerful, can survive without humility before its Creator. The ruins of the Ad are mentioned in the Quran as visible reminders for those who pass by them.`,
+    verses: ['Al-A\'raf 7:65-72', 'Hud 11:50-60', 'Fussilat 41:13-16', 'Al-Ahqaf 46:21-25'],
+  },
+  {
+    id: 'salih',
+    name: 'Salih',
+    nameAr: 'صالح',
+    title: 'The Prophet of Thamud & the She-Camel',
+    era: 'Ancient Arabia (Mada\'in Salih)',
+    emoji: '🐪',
+    color: '#6E2C00',
+    summary: 'Sent to the Thamud people who carved homes into mountains. When they demanded a miracle, Allah sent a miraculous she-camel. When they killed it, a devastating cry destroyed them all.',
+    lessons: [
+      'Every blessing from Allah is a test — how we treat His signs determines our fate',
+      'Miracles do not guarantee guidance — hardened hearts see signs and still reject',
+      'Arrogance blinds people even when the truth is right before their eyes',
+      'The remnants of destroyed civilizations are warnings, not tourist attractions'
+    ],
+    story: `Salih (peace be upon him) was sent to the people of Thamud, who lived in the northwestern part of Arabia, in an area known today as Mada\'in Salih (Hegra). They were master builders who carved magnificent homes and palaces into the mountains — structures that still stand today. Their wealth and skills had made them proud and dismissive of divine guidance.
+
+Salih, who was from their own tribe, called them to worship Allah alone: "O my people, worship Allah; you have no deity other than Him. There has come to you clear evidence from your Lord. This is the she-camel of Allah as a sign for you." The Thamud demanded a miracle, so Allah brought forth a miraculous she-camel from a rock — a creature unlike any they had seen. She was enormous and produced enough milk for everyone.
+
+Salih established rules: one day the she-camel would drink from their water source, and the next day they would. This was a fair arrangement, but the elite of Thamud saw the she-camel as a threat to their control. Despite Salih\'s desperate warnings — "And leave the she-camel to drink, and do not touch her with harm" — they plotted to kill her.
+
+The most arrogant among them, a man named Qudar, struck the she-camel with a sword, hamstringing her. When Salih saw what they had done, he declared: "Enjoy yourselves in your homes for three days. That is a promise not to be denied." On the third day, a devastating cry — a single deafening blast — struck them at dawn. They fell dead in their homes, as if they had never lived there.
+
+The Quran says the punishment was not simply for killing the she-camel, but for rejecting Allah and persisting in arrogance. The carved mountain homes of Thamud stand empty to this day, and the Prophet Muhammad (peace be upon him) passed by them during a journey and wept, warning his companions: "Do not enter the dwellings of those who wronged themselves unless you are weeping, lest what struck them should strike you as well."`,
+    verses: ['Al-A\'raf 7:73-79', 'Hud 11:61-68', 'Ash-Shu\'ara 26:141-159', 'Al-Qamar 54:23-31'],
+  },
+  {
+    id: 'shuayb',
+    name: 'Shu\'ayb',
+    nameAr: 'شعيب',
+    title: 'The Eloquence of the Prophets (Khatam al-Anbiya al-Balagha)',
+    era: 'Ancient Midian',
+    emoji: '⚖️',
+    color: '#1E8449',
+    summary: 'Sent to the people of Midian who cheated in trade and corrupted the markets. He taught honest business dealings and was given the title "the most eloquent of the prophets" by the Prophet Muhammad.',
+    lessons: [
+      'Fairness and honesty in business are religious obligations, not just good practices',
+      'Corrupting markets and cheating people is a sin that invites divine punishment',
+      'True eloquence lies in speaking truth, not in fancy words',
+      'Environmental destruction — even cutting down trees — is condemned in Islam'
+    ],
+    story: `Shu\'ayb (Jethro, peace be upon him) was sent to the people of Midian, who lived in the region between the Hijaz and Syria. The Midianites were known for their trade, but they had become deeply corrupt. They used rigged scales to cheat customers, shortchanging people in every transaction. They also worshipped a sacred grove of trees and blocked the roads to demand tolls from travelers.
+
+Shu\'ayb, known as "Khatam al-Anbiya al-Balagha" (the most eloquent of the prophets), called them to worship Allah alone and be honest in their dealings: "O my people, worship Allah; you have no deity other than Him. And do not decrease from the measure and the scale. Indeed, I see you in prosperity, but I fear for you the punishment of an encompassing day."
+
+He warned them that their corruption would bring destruction. He pleaded with them using logic: "O my people, give full measure and weight in justice. Do not defraud people of their property and do not go about in the land making mischief." But the wealthy elite mocked him: "O Shu\'ayb, does your prayer command you that we should leave what our fathers worship or not do with our wealth what we please?"
+
+When they persisted, Allah sent a punishment — the Quran describes it as "the punishment of the Day of the Shade," a scorching heat that roasted them. After nine days of warnings, a blast seized them, and they fell lifeless in their homes as if they had never prospered there.
+
+Shu\'ayb\'s story is uniquely relevant to modern times. It establishes Islam\'s strong stance on business ethics, fair trade, and environmental stewardship. The Prophet Muhammad (peace be upon him) later said that whoever cheats in trade is not among his followers. Shu\'ayb\'s message — that economic justice is a religious duty — remains one of the most powerful teachings in the Quran.`,
+    verses: ['Al-A\'raf 7:85-93', 'Hud 11:84-95', 'Ash-Shu\'ara 26:176-191', 'Al-Ankabut 29:36-37'],
+  },
+  {
+    id: 'zakariya',
+    name: 'Zakariya',
+    nameAr: 'زكريا',
+    title: 'The Father of Yahya',
+    era: '1st Century BCE',
+    emoji: '🕊️',
+    color: '#1A5276',
+    summary: 'An elderly priest who was given the miracle of a son — Yahya (John the Baptist) — despite his wife\'s barrenness and his own old age, after supplicating to Allah in the depths of the night.',
+    lessons: [
+      'Never underestimate the power of dua, especially the prayer of the night (tahajjud)',
+      'Allah\'s blessings come when He wills — trust His timing',
+      'Silent devotion and sincerity in worship are deeply beloved by Allah',
+      'Every child is a gift and a trust from Allah'
+    ],
+    story: `Zakariya (Zechariah, peace be upon him) was a righteous priest who cared for Maryam (Mary) in the sanctuary of Bayt al-Maqdis in Jerusalem. He was known for his devotion and was deeply moved by the purity and faith of young Maryam.
+
+One day, while praying in the sanctuary, Zakariya saw Maryam receiving provision from Allah — out-of-season fruits appearing whenever she needed them. This miracle stirred something in his heart. He was an old man, and his wife Elizabeth had been barren throughout their marriage. Yet in that moment of witnessing Allah\'s generosity, something ignited within him.
+
+He raised his hands in prayer: "My Lord, grant me from Yourself a good offspring. Indeed, You are the Hearer of supplication." The angels called out to him while he stood praying: "Indeed, Allah gives you good tidings of Yahya, confirming a word from Allah, honorable, abstaining, and a prophet from among the righteous."
+
+Zakariya was astonished: "My Lord, how will I have a boy when I have reached old age and my wife is barren?" The response came: "Thus does Allah do what He wills." Zakariya asked for a sign, and Allah said: "Your sign is that you will not speak to the people for three nights, being sound."
+
+And so Zakariya emerged from the sanctuary unable to speak, gesturing to his people to glorify Allah morning and evening. His son Yahya was born — a boy of extraordinary purity, wisdom, and devotion. The Quran describes Yahya as one who was "dutiful to his parents, and he was not a disobedient tyrant." Zakariya\'s story teaches us that the most powerful duas are those made in moments of deep sincerity, and that Allah\'s timing, though we may not understand it, is always perfect.`,
+    verses: ['Ali \'Imran 3:37-41', 'Maryam 19:2-15', 'Al-Anbiya 21:89-90'],
+  },
+  {
+    id: 'yahya',
+    name: 'Yahya',
+    nameAr: 'يحيى',
+    title: 'The Pure & Ascetic Prophet',
+    era: '1st Century CE',
+    emoji: '🌿',
+    color: '#145A32',
+    summary: 'The son of Zakariya, born as a miracle, known for his ascetic lifestyle, fear of Allah, and unwavering commitment to justice. He was given wisdom while still a child and is one of the most honored prophets in Islam.',
+    lessons: [
+      'True piety is measured by devotion, not worldly possessions',
+      'Justice means standing for truth even against the most powerful',
+      'A pure heart from childhood is one of the greatest blessings',
+      'Sacrificing comfort for the sake of Allah is the path of the righteous'
+    ],
+    story: `Yahya (John the Baptist, peace be upon him) was the miracle son of Zakariya, born to elderly parents who had given up hope of having children. From the moment of his conception, he was marked for greatness. The angels said about him: "O Zakariya, indeed We give you good tidings of a boy whose name will be Yahya. We have not assigned to any before this name."
+
+Allah bestowed upon Yahya wisdom while he was still a child. He grew up to be exceptionally pious, living a simple and ascetic life far from worldly comforts. The Quran describes him with three remarkable qualities: he was "dutiful to his parents," he was "not a disobedient tyrant," and he was granted "honor" and "purity" from birth. The Prophet Muhammad (peace be upon him) said that Yahya was never committed a sin — not even a moment of thoughtless action.
+
+Yahya called people to worship Allah and to follow the truth with courage. He spoke against injustice and moral corruption, even confronting the ruler of his time. His unwavering stance for truth eventually led to his martyrdom — he was killed for refusing to remain silent about an unjust act by the ruling authority.
+
+The Quran honors Yahya with a unique verse: "And peace be upon him the day he was born and the day he dies and the day he is raised alive." This triple blessing — peace at birth, death, and resurrection — is given to only Yahya and Isa (Jesus). His life, though cut short, stands as a powerful example that true greatness lies not in length of days but in depth of devotion and commitment to truth.`,
+    verses: ['Maryam 19:12-15', 'Ali \'Imran 3:39', 'Al-An\'am 6:85'],
+  },
+  {
+    id: 'ilyas',
+    name: 'Ilyas',
+    nameAr: 'إلياس',
+    title: 'The Defender of Pure Monotheism',
+    era: 'Ancient Israel (Northern Kingdom)',
+    emoji: '🔥',
+    color: '#922B21',
+    summary: 'Sent to the Israelites during the reign of King Ahab when they had abandoned Allah and turned to worshipping an idol called Ba\'al. He challenged the false prophets on Mount Carmel and called people back to the One God.',
+    lessons: [
+      'Compromising on tawheed (monotheism) is the most dangerous form of corruption',
+      'Standing against the majority for the truth requires extraordinary courage',
+      'False gods — whether idols, wealth, or power — always lead to destruction',
+      'Allah protects those who are sincere in their faith, even when all seems lost'
+    ],
+    story: `Ilyas (Elijah, peace be upon him) was sent to the Israelites during one of the darkest periods in their history. Under King Ahab and Queen Jezebel, the people had largely abandoned the worship of Allah and turned to Ba\'al — a pagan idol. The temples of Ba\'al were everywhere, and the true believers were a persecuted minority.
+
+Ilyas confronted the people with bold clarity: "Will you not fear Allah? Do you call upon Ba\'al and leave the best of creators — Allah, your Lord and the Lord of your forefathers?" When King Ahab sought him, Ilyas challenged the 450 prophets of Ba\'al to a public contest on Mount Carmel — a test to see whose God was real.
+
+The contest was dramatic. The prophets of Ba\'al prayed all day, screaming and cutting themselves, but nothing happened. Then Ilyas repaired the altar of Allah that had been torn down, dug a trench around it, and had water poured over the sacrifice three times. He prayed simply: "O Allah, Lord of Ibrahim, Ishaq, and Yaqub, answer me so that this people will know that You are Allah and that You have turned their hearts back."
+
+Fire came down from heaven and consumed the sacrifice, the wood, the stones, the dust, and even the water in the trench. The people fell in prostration. But the story of Ilyas also involves personal hardship — he fled persecution and at one point prayed for death out of exhaustion. Allah provided for him miraculously through a widow and later showed him His presence not in wind, earthquake, or fire, but in a gentle whisper.
+
+The Quran affirms Ilyas as one of the righteous and records that his message was essentially the same as all prophets: "Indeed, Ilyas was from among the messengers, when he said to his people, 'Will you not fear Allah?'"`,
+    verses: ['As-Saffat 37:123-132', 'Al-An\'am 6:85'],
+  },
+  {
+    id: 'idrees',
+    name: 'Idrees',
+    nameAr: 'إدريس',
+    title: 'The Prophet Who Ascended',
+    era: 'Ancient Times (Pre-Flood)',
+    emoji: '🔭',
+    color: '#1F618D',
+    summary: 'A prophet who was raised by Allah to a high station for his righteousness and patience. Known for his wisdom, the Quran affirms he was a man of truth and was elevated to heaven.',
+    lessons: [
+      'Righteous living and patience are rewarded beyond what we can imagine',
+      'Allah honors those who are sincere in their devotion',
+      'Knowledge combined with action is the path to true elevation',
+      'Some of the greatest rewards are reserved for the hereafter'
+    ],
+    story: `Idrees (Enoch, peace be upon him) is one of the earliest prophets, mentioned in the Quran alongside Adam and Nuh among those who were "patient and upon them We bestowed guidance." His story is brief but extraordinarily significant. The Quran says: "And mention in the Book, Idrees. Indeed, he was a man of truth and a prophet. And We raised him to a high station."
+
+This enigmatic description — "raised him to a high station" (rafanahu makanan aliyya) — has fascinated scholars throughout history. Unlike most prophets whose stories are told in detail, Idrees\'s story is told in just a few verses, yet the Quran elevates him with a unique honor that suggests something extraordinary about his spiritual rank.
+
+Islamic tradition holds that Idrees lived before the great flood of Nuh. He was known for his exceptional wisdom and was the first to write with a pen, to study astronomy, and to teach people about the measurement of weights and measures. He called his people to the truth during a time of growing corruption and guided those who followed him with patience and insight.
+
+The Prophet Muhammad (peace be upon him) met Idrees during his Night Journey (Isra and Mi\'raj). When he passed through the fourth heaven, he found Idrees there and asked Jibril, "Who is this?" Jibril replied, "This is Idrees." The Prophet later described him as having been elevated to paradise itself as a reward for his devotion and patience.
+
+The story of Idrees reminds us that not all acts of greatness are recorded in detail — some are known only to Allah. His brief mention in the Quran carries a profound message: a life of truth, patience, and devotion can lead to a rank that even the greatest prophets acknowledge. His legacy lives on as a reminder that sincerity in worship is rewarded in ways beyond our comprehension.`,
+    verses: ['Maryam 19:56-57', 'Al-Anbiya 21:85-86'],
+  },
 ];
 
 function ProphetStories() {

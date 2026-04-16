@@ -38,6 +38,7 @@ import {
   HandHeart,
   MapPin,
   Clock,
+  Compass,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -931,6 +932,34 @@ function getArabicFontSize(size: string): string {
 
 
 
+// ─── Qibla Helpers ────────────────────────────────────────
+
+const KAABA_LAT = 21.4225;
+const KAABA_LNG = 39.8262;
+
+function calculateQiblaBearing(lat: number, lng: number): number {
+  const latRad = lat * Math.PI / 180;
+  const lngRad = lng * Math.PI / 180;
+  const kaabaLatRad = KAABA_LAT * Math.PI / 180;
+  const kaabaLngRad = KAABA_LNG * Math.PI / 180;
+  const dLng = kaabaLngRad - lngRad;
+  const x = Math.sin(dLng);
+  const y = Math.cos(latRad) * Math.tan(kaabaLatRad) - Math.sin(latRad) * Math.cos(dLng);
+  let qibla = Math.atan2(x, y) * 180 / Math.PI;
+  return (qibla + 360) % 360;
+}
+
+function calculateDistanceToKaaba(lat: number, lng: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = (KAABA_LAT - lat) * Math.PI / 180;
+  const dLng = (KAABA_LNG - lng) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat * Math.PI / 180) * Math.cos(KAABA_LAT * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 // ─── Toast Utility ────────────────────────────────────────
 
 function useToast() {
@@ -958,7 +987,7 @@ function useToast() {
 // ─── Main Page Component ──────────────────────────────────
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings'>('quran');
+  const [activeTab, setActiveTab] = useState<'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla'>('quran');
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -1187,6 +1216,11 @@ export default function Home() {
                 />
               </TabErrorBoundary>
             )}
+            {activeTab === 'qibla' && (
+              <TabErrorBoundary>
+                <QiblaFinder />
+              </TabErrorBoundary>
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -1244,7 +1278,7 @@ function IslamicHeader({
   toggleTheme,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla') => void;
   setSelectedSurah: (n: number | null) => void;
   isDark: boolean;
   toggleTheme: () => void;
@@ -1254,6 +1288,7 @@ function IslamicHeader({
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'duas' as const, label: 'Duas', icon: HandHeart },
+    { id: 'qibla' as const, label: 'Qibla', icon: Compass },
     { id: 'bookmarks' as const, label: 'Bookmarks', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -1321,7 +1356,7 @@ function MobileBottomNav({
   setSelectedSurah,
 }: {
   activeTab: string;
-  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings') => void;
+  setActiveTab: (tab: 'quran' | 'listen' | 'daily' | 'duas' | 'bookmarks' | 'settings' | 'qibla') => void;
   setSelectedSurah: (n: number | null) => void;
 }) {
   const tabs = [
@@ -1329,6 +1364,7 @@ function MobileBottomNav({
     { id: 'listen' as const, label: 'Listen', icon: Headphones },
     { id: 'daily' as const, label: 'My Space', icon: Sparkles },
     { id: 'duas' as const, label: 'Duas', icon: HandHeart },
+    { id: 'qibla' as const, label: 'Qibla', icon: Compass },
     { id: 'bookmarks' as const, label: 'Saved', icon: Bookmark },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -1346,7 +1382,7 @@ function MobileBottomNav({
                 setActiveTab(tab.id);
                 if (tab.id === 'quran') setSelectedSurah(null);
               }}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 min-w-[3.5rem] min-h-[44px] ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200 min-w-[3rem] min-h-[44px] ${
                 isActive
                   ? 'text-[#0D4B3C] dark:text-[#C8A951]'
                   : 'text-[#6B7280] dark:text-[#9CA3AF]'
@@ -4059,6 +4095,28 @@ function DailyMotivation({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ── Islamic Date & Countdown State ──
+  const [hijriDate, setHijriDate] = useState<string>('');
+  const [gregorianDate, setGregorianDate] = useState<string>('');
+  const [countdown, setCountdown] = useState<string>('');
+
+  useEffect(() => {
+    try {
+      const hijri = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      }).format(new Date());
+      setHijriDate(hijri);
+
+      const greg = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      }).format(new Date());
+      setGregorianDate(greg);
+    } catch {
+      setHijriDate(new Date().toLocaleDateString());
+      setGregorianDate(new Date().toLocaleDateString());
+    }
+  }, []);
   const [copied, setCopied] = useState(false);
   const [dailyHadith] = useState<Hadith>(() => {
     const today = new Date();
@@ -4138,6 +4196,43 @@ function DailyMotivation({
   }, []);
 
   const nextPrayer = prayerTimes ? getNextPrayer(prayerTimes) : null;
+
+  // ── Countdown to Next Prayer ──
+  useEffect(() => {
+    if (!prayerTimes || !nextPrayer) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const timeStr = prayerTimes[nextPrayer];
+      if (!timeStr || timeStr === '--:--') return;
+
+      // Parse the prayer time string (e.g., "5:30 AM")
+      const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
+      if (!parts) return;
+      let h = parseInt(parts[1]);
+      const m = parseInt(parts[2]);
+      if (parts[3] === 'PM' && h !== 12) h += 12;
+      if (parts[3] === 'AM' && h === 12) h = 0;
+
+      // Create prayer time for today
+      const prayerDate = new Date();
+      prayerDate.setHours(h, m, 0, 0);
+
+      let diff = prayerDate.getTime() - now.getTime();
+      if (diff < 0) {
+        // If next prayer is tomorrow (e.g., Isha passed, next is Fajr)
+        diff += 24 * 60 * 60 * 1000;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setCountdown(`${hours}h ${mins}m`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 30000);
+    return () => clearInterval(interval);
+  }, [prayerTimes, nextPrayer, currentTime]);
 
   // ── Situation Duas State ──
   const [selectedSituation, setSelectedSituation] = useState<string | null>(null);
@@ -4254,6 +4349,37 @@ function DailyMotivation({
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* ─── Islamic Date & Next Prayer Dashboard ─── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="px-4 pt-4 pb-2 sm:px-6"
+      >
+        <Card className="overflow-hidden shadow-lg">
+          <div className="bg-gradient-to-br from-[#0D4B3C] via-[#0D4B3C] to-[#1B6B52] p-5">
+            {/* Islamic Date */}
+            <div className="text-center mb-4">
+              <p className="text-[#C8A951]/80 text-[10px] uppercase tracking-widest font-medium mb-1">Islamic Date</p>
+              <p className="text-white text-sm font-semibold">{hijriDate}</p>
+              <p className="text-white/50 text-[10px] mt-0.5">{gregorianDate}</p>
+            </div>
+
+            {/* Divider */}
+            <div className="w-16 h-px bg-[#C8A951]/30 mx-auto my-3" />
+
+            {/* Next Prayer Countdown */}
+            {nextPrayer && prayerTimes && (
+              <div className="text-center">
+                <p className="text-[#C8A951]/80 text-[10px] uppercase tracking-widest font-medium mb-1">Next Prayer</p>
+                <p className="text-[#C8A951] text-2xl font-bold">{nextPrayer}</p>
+                <p className="text-white text-lg font-medium mt-0.5">{countdown ? `in ${countdown}` : prayerTimes[nextPrayer]}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+
       {/* ─── Prayer Times Widget ─── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -4689,6 +4815,348 @@ function DailyMotivation({
 }
 
 
+
+// ─── Qibla Finder ─────────────────────────────────────────
+
+function QiblaFinder() {
+  const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem('wird-location');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+  const [heading, setHeading] = useState(0);
+  const [compassAvailable, setCompassAvailable] = useState(true);
+  const [compassError, setCompassError] = useState(false);
+  const [locationLoaded, setLocationLoaded] = useState(false);
+
+  const qiblaBearing = useMemo(() => location ? calculateQiblaBearing(location.lat, location.lng) : null, [location]);
+  const distance = useMemo(() => location ? calculateDistanceToKaaba(location.lat, location.lng) : null, [location]);
+
+  // Get location
+  useEffect(() => {
+    if (location) {
+      setLocationLoaded(true);
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(loc);
+          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
+        },
+        () => {
+          const mecca = { lat: 21.4225, lng: 39.8262 };
+          setLocation(mecca);
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      setLocation({ lat: 21.4225, lng: 39.8262 });
+    }
+  }, [location]);
+
+  // Get compass heading
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const ev = event as any;
+      let h: number;
+      if (ev.webkitCompassHeading !== undefined) {
+        h = ev.webkitCompassHeading;
+      } else if (ev.alpha !== undefined) {
+        h = (360 - ev.alpha) % 360;
+      } else {
+        h = 0;
+      }
+      setHeading(h);
+    };
+
+    // Check if DeviceOrientationEvent exists
+    if (typeof DeviceOrientationEvent === 'undefined') {
+      setCompassAvailable(false);
+      return;
+    }
+
+    // iOS 13+ requires permission
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      // Store permission request for button trigger
+      return;
+    }
+
+    // Try to detect if compass data actually arrives
+    let gotData = false;
+    const timeout = setTimeout(() => {
+      if (!gotData) setCompassAvailable(false);
+    }, 2000);
+
+    const wrappedHandler = (e: DeviceOrientationEvent) => {
+      gotData = true;
+      clearTimeout(timeout);
+      handleOrientation(e);
+    };
+
+    window.addEventListener('deviceorientation', wrappedHandler);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('deviceorientation', wrappedHandler);
+    };
+  }, []);
+
+  const requestCompassPermission = async () => {
+    try {
+      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        const permission = await (DeviceOrientationEvent as any).requestPermission();
+        if (permission === 'granted') {
+          setCompassAvailable(true);
+          setCompassError(false);
+          window.addEventListener('deviceorientation', (e: DeviceOrientationEvent) => {
+            const ev = e as any;
+            let h: number;
+            if (ev.webkitCompassHeading !== undefined) {
+              h = ev.webkitCompassHeading;
+            } else if (ev.alpha !== undefined) {
+              h = (360 - ev.alpha) % 360;
+            } else {
+              h = 0;
+            }
+            setHeading(h);
+          });
+        } else {
+          setCompassError(true);
+          setCompassAvailable(false);
+        }
+      }
+    } catch {
+      setCompassError(true);
+      setCompassAvailable(false);
+    }
+  };
+
+  const qiblaOffset = qiblaBearing !== null ? ((qiblaBearing - heading + 360) % 360) : 0;
+
+  // Generate tick marks for the compass ring
+  const cardinalDirections = [
+    { label: 'N', angle: 0, size: 'text-lg font-bold' },
+    { label: 'E', angle: 90, size: 'text-sm font-semibold' },
+    { label: 'S', angle: 180, size: 'text-sm font-semibold' },
+    { label: 'W', angle: 270, size: 'text-sm font-semibold' },
+  ];
+
+  // Degree marks every 30 degrees
+  const degreeMarks = Array.from({ length: 12 }, (_, i) => i * 30);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center"
+      >
+        {/* Title */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Qibla Finder</h2>
+          <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Find the direction of the Kaaba</p>
+        </div>
+
+        {!locationLoaded ? (
+          <div className="flex flex-col items-center py-12">
+            <Loader2 className="w-8 h-8 text-[#0D4B3C] dark:text-[#C8A951] animate-spin mb-3" />
+            <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">Detecting your location...</p>
+          </div>
+        ) : qiblaBearing !== null ? (
+          <Card className="w-full max-w-sm overflow-hidden shadow-xl">
+            <div className="bg-gradient-to-br from-[#0D4B3C] via-[#0D4B3C] to-[#1B6B52] p-6">
+              {/* Compass */}
+              <div className="flex justify-center mb-6">
+                <div className="relative w-72 h-72 sm:w-80 sm:h-80">
+                  {/* Outer ring */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#0A3B2F] to-[#0D4B3C] border-4 border-[#C8A951]/30 shadow-2xl">
+                    {/* Compass rotation container */}
+                    <div
+                      className="absolute inset-0 transition-transform duration-300 ease-out"
+                      style={{ transform: compassAvailable ? `rotate(${-heading}deg)` : 'none' }}
+                    >
+                      {/* Degree marks */}
+                      {degreeMarks.map((deg) => (
+                        <div
+                          key={deg}
+                          className="absolute left-1/2 top-0 w-px h-full origin-center"
+                          style={{ transform: `rotate(${deg}deg)` }}
+                        >
+                          <div className={`absolute left-1/2 -translate-x-1/2 ${deg % 90 === 0 ? 'h-3 w-0.5 bg-[#C8A951]' : 'h-2 w-0.5 bg-white/30'}`}
+                            style={{ top: '6px' }} />
+                        </div>
+                      ))}
+
+                      {/* Cardinal directions */}
+                      {cardinalDirections.map(({ label, angle, size }) => (
+                        <div
+                          key={label}
+                          className="absolute left-1/2 top-0 origin-center"
+                          style={{ transform: `rotate(${angle}deg) translateY(-52px)` }}
+                        >
+                          <span
+                            className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${size} ${angle === 0 ? 'text-[#C8A951]' : 'text-white/80'}`}
+                            style={{ transform: `rotate(${-angle}deg) translateX(-50%)` }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Qibla direction indicator on ring */}
+                      <div
+                        className="absolute left-1/2 top-0 origin-center"
+                        style={{ transform: `rotate(${qiblaBearing}deg) translateY(-44px)` }}
+                      >
+                        <span
+                          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl"
+                          style={{ transform: `rotate(${-qiblaBearing}deg) translateX(-50%)` }}
+                        >
+                          🕌
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Qibla gold arc from center */}
+                    {compassAvailable && (
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 300">
+                        <defs>
+                          <linearGradient id="qiblaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#C8A951" stopOpacity="0.9" />
+                            <stop offset="100%" stopColor="#C8A951" stopOpacity="0.3" />
+                          </linearGradient>
+                        </defs>
+                        {/* Qibla direction line */}
+                        <line
+                          x1="150" y1="150"
+                          x2={150 + 95 * Math.sin((qiblaOffset) * Math.PI / 180)}
+                          y2={150 - 95 * Math.cos((qiblaOffset) * Math.PI / 180)}
+                          stroke="#C8A951"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeDasharray="8,4"
+                        />
+                        {/* Arrow at end of Qibla line */}
+                        <polygon
+                          points={(() => {
+                            const a = qiblaOffset * Math.PI / 180;
+                            const tipX = 150 + 95 * Math.sin(a);
+                            const tipY = 150 - 95 * Math.cos(a);
+                            const leftX = tipX - 12 * Math.sin(a - 0.4);
+                            const leftY = tipY + 12 * Math.cos(a - 0.4);
+                            const rightX = tipX - 12 * Math.sin(a + 0.4);
+                            const rightY = tipY + 12 * Math.cos(a + 0.4);
+                            return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
+                          })()}
+                          fill="#C8A951"
+                        />
+                      </svg>
+                    )}
+
+                    {/* Static Qibla line when no compass */}
+                    {!compassAvailable && (
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 300">
+                        <line
+                          x1="150" y1="150"
+                          x2={150 + 95 * Math.sin(qiblaBearing * Math.PI / 180)}
+                          y2={150 - 95 * Math.cos(qiblaBearing * Math.PI / 180)}
+                          stroke="#C8A951"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeDasharray="8,4"
+                        />
+                        <polygon
+                          points={(() => {
+                            const a = qiblaBearing * Math.PI / 180;
+                            const tipX = 150 + 95 * Math.sin(a);
+                            const tipY = 150 - 95 * Math.cos(a);
+                            const leftX = tipX - 12 * Math.sin(a - 0.4);
+                            const leftY = tipY + 12 * Math.cos(a - 0.4);
+                            const rightX = tipX - 12 * Math.sin(a + 0.4);
+                            const rightY = tipY + 12 * Math.cos(a + 0.4);
+                            return `${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`;
+                          })()}
+                          fill="#C8A951"
+                        />
+                      </svg>
+                    )}
+
+                    {/* Center dot */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                      <div className="w-6 h-6 rounded-full bg-[#C8A951] border-2 border-white shadow-lg flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Panel */}
+              <div className="text-center space-y-4">
+                {/* Qibla Direction */}
+                <div>
+                  <p className="text-[#C8A951]/70 text-[10px] uppercase tracking-widest font-medium">Qibla Direction</p>
+                  <p className="text-[#C8A951] text-3xl font-bold">{Math.round(qiblaBearing)}°</p>
+                  <p className="text-white/50 text-xs">from North</p>
+                </div>
+
+                {/* Distance */}
+                {distance !== null && (
+                  <div>
+                    <p className="text-white/40 text-[10px] uppercase tracking-widest font-medium">Distance to Kaaba</p>
+                    <p className="text-white text-xl font-semibold">{distance.toLocaleString()} km</p>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="w-16 h-px bg-[#C8A951]/30 mx-auto" />
+
+                {/* Compass Status */}
+                {compassAvailable ? (
+                  <div>
+                    <p className="text-green-400 text-xs flex items-center justify-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-400 inline-block animate-pulse" />
+                      Compass active — hold device level
+                    </p>
+                  </div>
+                ) : compassError ? (
+                  <div>
+                    <p className="text-red-400 text-xs flex items-center justify-center gap-1.5">
+                      Compass permission denied
+                    </p>
+                    <button
+                      onClick={requestCompassPermission}
+                      className="mt-2 px-4 py-1.5 rounded-lg bg-[#C8A951]/20 text-[#C8A951] text-xs font-medium hover:bg-[#C8A951]/30 transition-colors"
+                    >
+                      Enable Compass
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-white/50 text-xs flex items-center justify-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5" />
+                      Compass not available on this device
+                    </p>
+                    <p className="text-white/30 text-[10px] mt-1">
+                      Point your phone toward {Math.round(qiblaBearing)}° from North
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ) : null}
+      </motion.div>
+    </div>
+  );
+}
 
 // ─── Bookmarks View ───────────────────────────────────────
 

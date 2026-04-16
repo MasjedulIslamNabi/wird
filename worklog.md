@@ -183,3 +183,56 @@ Stage Summary:
 - Service worker cache busted to v2 for fresh content delivery
 - Manifest improved with shortcuts, maskable icons, categories
 - Settings page includes install instructions card
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Add Qibla Finder tab + Islamic Date Dashboard with Next Prayer Countdown
+
+Work Log:
+- Read worklog (186 lines) and page.tsx (~5418 lines) — understood architecture
+- TASK 1: Qibla Finder (New Tab)
+  A. Added `Compass` to lucide-react imports (line 41)
+  B. Added Qibla helper functions near other helpers section (~line 935):
+     - `calculateQiblaBearing(lat, lng)` — spherical trigonometry bearing to Kaaba
+     - `calculateDistanceToKaaba(lat, lng)` — Haversine distance formula
+  C. Added `QiblaFinder` component (~340 lines) before BookmarksView:
+     - Uses cached geolocation from localStorage (`wird-location`)
+     - Falls back to Makkah if geolocation denied/unavailable
+     - DeviceOrientationEvent compass with iOS 13+ permission handling
+     - Auto-detects compass availability with 2s timeout
+     - Beautiful circular compass UI: dark emerald green, gold (#C8A951) Qibla indicator
+     - Rotating compass ring with N/E/S/W cardinal directions + 30° degree marks
+     - Kaaba emoji (🕌) on compass ring at Qibla direction
+     - SVG gold arrow from center pointing to Qibla (dynamic with compass, static without)
+     - Displays Qibla bearing (e.g., "267° from North")
+     - Displays distance to Kaaba in km
+     - Desktop/no-compass fallback with static compass and manual bearing guidance
+     - Uses useMemo for computed values (qiblaBearing, distance)
+  D. Updated Home component activeTab type to include 'qibla' (line 990)
+  E. Added `{activeTab === 'qibla' && <QiblaFinder />}` tab rendering in TabErrorBoundary (line 1219)
+  F. Updated IslamicHeader: added `{ id: 'qibla', label: 'Qibla', icon: Compass }` to tabs array
+  G. Updated MobileBottomNav: added Qibla tab, reduced min-w from 3.5rem to 3rem, px from 3 to 2
+  H. Updated setActiveTab type signatures in both IslamicHeader and MobileBottomNav props
+
+- TASK 2: Islamic Date Dashboard + Next Prayer Countdown
+  A. Added state variables: hijriDate, gregorianDate, countdown in DailyMotivation
+  B. Added useEffect to compute Hijri date via `Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura')`
+  C. Added Gregorian date via standard `Intl.DateTimeFormat('en-US')`
+  D. Added countdown timer useEffect (30s interval) parsing prayer time strings, handling AM/PM
+  E. Added dashboard card ABOVE prayer times widget with:
+     - Islamic (Hijri) date in emerald gradient card
+     - Gregorian date below in muted text
+     - Gold divider
+     - Next prayer name + countdown (e.g., "Dhuhr in 2h 15m")
+- Verified: dev server compiles successfully, GET / returns 200
+
+Stage Summary:
+- New "Qibla" tab with full compass feature (geolocation + device orientation)
+- Compass UI rotates based on device heading, shows Kaaba direction with gold arrow
+- Desktop fallback shows static compass with bearing instruction
+- Islamic (Hijri) date displayed on My Space dashboard using Umm al-Qura calendar
+- Next prayer countdown timer (updates every 30s) shows time remaining
+- File grew from ~5418 to ~5758 lines
+- All 7 tabs: Quran, Listen, My Space, Duas, Qibla, Saved, Settings
+- Build verified: Next.js 16.1.3 Turbopack, compiles successfully

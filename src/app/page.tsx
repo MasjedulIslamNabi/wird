@@ -39,6 +39,9 @@ import {
   MapPin,
   Clock,
   ScrollText,
+  Bell,
+  BellRing,
+  BellOff,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1187,6 +1190,11 @@ export default function Home() {
                   toggleTheme={toggleTheme}
                   arabicFontSize={arabicFontSize}
                   changeFontSize={changeFontSize}
+                  notifEnabled={notifEnabled}
+                  notifPermission={notifPermission}
+                  toggleNotifEnabled={toggleNotifEnabled}
+                  notifAdvance={notifAdvance}
+                  changeNotifAdvance={changeNotifAdvance}
                 />
               </TabErrorBoundary>
             )}
@@ -4117,6 +4125,122 @@ function DailyMotivation({
   const [locationDenied, setLocationDenied] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // ── Prayer Notification State ──
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'default'>('default');
+  const [notifAdvance, setNotifAdvance] = useState(15);
+  const [lastNotifiedPrayer, setLastNotifiedPrayer] = useState<string | null>(null);
+  const notifIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load notification settings
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('wird-notif-enabled');
+      if (saved === 'true') setNotifEnabled(true);
+      const savedAdv = localStorage.getItem('wird-notif-advance');
+      if (savedAdv) setNotifAdvance(parseInt(savedAdv) || 15);
+      const savedLast = localStorage.getItem('wird-notif-last');
+      if (savedLast) setLastNotifiedPrayer(savedLast);
+    } catch { /* ignore */ }
+
+    // Check current permission
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  // Request notification permission
+  const requestNotifPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    try {
+      const perm = await Notification.requestPermission();
+      setNotifPermission(perm);
+      if (perm === 'granted') {
+        setNotifEnabled(true);
+        try { localStorage.setItem('wird-notif-enabled', 'true'); } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Toggle notifications
+  const toggleNotifEnabled = useCallback(() => {
+    if (notifPermission !== 'granted') {
+      requestNotifPermission();
+      return;
+    }
+    const next = !notifEnabled;
+    setNotifEnabled(next);
+    try { localStorage.setItem('wird-notif-enabled', String(next)); } catch { /* ignore */ }
+    if (!next) {
+      setLastNotifiedPrayer(null);
+      try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
+    }
+  }, [notifEnabled, notifPermission, requestNotifPermission]);
+
+  // Change advance time
+  const changeNotifAdvance = useCallback((mins: number) => {
+    setNotifAdvance(mins);
+    try { localStorage.setItem('wird-notif-advance', String(mins)); } catch { /* ignore */ }
+  }, []);
+
+  // Notification checker — runs every 30 seconds
+  useEffect(() => {
+    if (!notifEnabled || notifPermission !== 'granted') {
+      if (notifIntervalRef.current) {
+        clearInterval(notifIntervalRef.current);
+        notifIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const checkAndNotify = () => {
+      if (!prayerTimes) return;
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const order = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+      for (const name of order) {
+        const timeStr = prayerTimes[name];
+        if (!timeStr || timeStr === '--:--') continue;
+        const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
+        if (!parts) continue;
+        let h = parseInt(parts[1]);
+        const m = parseInt(parts[2]);
+        if (parts[3] === 'PM' && h !== 12) h += 12;
+        if (parts[3] === 'AM' && h === 12) h = 0;
+        const prayerMinutes = h * 60 + m;
+        const diff = prayerMinutes - currentMinutes;
+
+        // If prayer is within the advance window and not yet notified
+        if (diff > 0 && diff <= notifAdvance && lastNotifiedPrayer !== name) {
+          new Notification(`🕌 ${name} Prayer in ${diff} min`, {
+            body: `Prepare for ${name} prayer at ${timeStr}. May Allah accept your prayers.`,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: `wird-${name}-${now.toDateString()}`,
+            requireInteraction: false,
+            silent: false,
+          });
+          setLastNotifiedPrayer(name);
+          try { localStorage.setItem('wird-notif-last', name); } catch { /* ignore */ }
+          break;
+        }
+
+        // Reset lastNotifiedPrayer if the prayer time has passed
+        if (diff <= 0 && lastNotifiedPrayer === name) {
+          setLastNotifiedPrayer(null);
+          try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
+        }
+      }
+    };
+
+    checkAndNotify();
+    notifIntervalRef.current = setInterval(checkAndNotify, 30000);
+    return () => {
+      if (notifIntervalRef.current) clearInterval(notifIntervalRef.current);
+    };
+  }, [notifEnabled, notifPermission, prayerTimes, notifAdvance, lastNotifiedPrayer]);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
@@ -4374,6 +4498,11 @@ function DailyMotivation({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {notifEnabled && notifPermission === 'granted' && (
+                <div className="w-5 h-5 flex items-center justify-center" title="Prayer notifications active">
+                  <Bell className="w-3.5 h-3.5 text-[#C8A951]" />
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -5677,11 +5806,21 @@ function SettingsView({
   toggleTheme,
   arabicFontSize,
   changeFontSize,
+  notifEnabled,
+  notifPermission,
+  toggleNotifEnabled,
+  notifAdvance,
+  changeNotifAdvance,
 }: {
   isDark: boolean;
   toggleTheme: () => void;
   arabicFontSize: string;
   changeFontSize: (s: 'sm' | 'md' | 'lg') => void;
+  notifEnabled: boolean;
+  notifPermission: NotificationPermission | 'default';
+  toggleNotifEnabled: () => void;
+  notifAdvance: number;
+  changeNotifAdvance: (mins: number) => void;
 }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -5716,6 +5855,74 @@ function SettingsView({
             </div>
             <Switch checked={isDark} onCheckedChange={toggleTheme} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Prayer Notifications */}
+      <Card className="overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-[#C8A951] via-[#0D4B3C] to-[#C8A951]" />
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#C8A951]/10 dark:bg-[#C8A951]/15 flex items-center justify-center">
+                {notifEnabled && notifPermission === 'granted'
+                  ? <BellRing className="w-5 h-5 text-[#C8A951]" />
+                  : <BellOff className="w-5 h-5 text-[#6B7280] dark:text-[#9CA3AF]" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Prayer Notifications</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  {notifPermission === 'denied'
+                    ? 'Notifications blocked by browser'
+                    : notifPermission === 'granted'
+                      ? notifEnabled ? 'Active — you will be notified before each prayer' : 'Disabled — toggle to enable'
+                      : 'Enable to get reminded before each prayer'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={notifEnabled && notifPermission === 'granted'}
+              onCheckedChange={toggleNotifEnabled}
+              disabled={notifPermission === 'denied'}
+            />
+          </div>
+
+          {notifEnabled && notifPermission === 'granted' && (
+            <div className="pt-2 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+              <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-3">Remind me before prayer:</p>
+              <div className="flex items-center gap-2">
+                {[
+                  { mins: 5, label: '5 min' },
+                  { mins: 10, label: '10 min' },
+                  { mins: 15, label: '15 min' },
+                  { mins: 30, label: '30 min' },
+                ].map(({ mins, label }) => (
+                  <button
+                    key={mins}
+                    onClick={() => changeNotifAdvance(mins)}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-center transition-all duration-200 text-xs font-medium ${
+                      notifAdvance === mins
+                        ? 'border-[#C8A951] bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                        : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#C8A951]/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] mt-2 text-center">
+                📱 For best results, install Wird as an app first so notifications work even when the browser is closed.
+              </p>
+            </div>
+          )}
+
+          {notifPermission === 'denied' && (
+            <div className="pt-2 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+              <p className="text-xs text-red-500 dark:text-red-400 leading-relaxed">
+                Notifications are blocked. To enable them, go to your browser settings → Site Settings → Notifications → Allow for this site.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

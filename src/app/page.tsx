@@ -53,6 +53,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { isNative, scheduleAdhan, scheduleVerseReminder, schedulePrePrayerReminder, sendTestNotification, requestNotificationPermission, cancelAllNotifications } from '@/lib/native-notif';
+import { isNativeGeo, requestLocationPermission, checkLocationPermission, getCurrentLocation } from '@/lib/native-geo';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -2803,6 +2804,8 @@ export default function Home() {
   // ── Android native optimizations ──
   useEffect(() => {
     if (!isNative()) return;
+    // Add 'native-app' class to <html> for CSS performance optimizations
+    document.documentElement.classList.add('native-app');
     // Set status bar color to match the app's emerald green header
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     StatusBar.setBackgroundColor({ color: '#0D4B3C' }).catch(() => {});
@@ -3092,47 +3095,79 @@ export default function Home() {
       setPrayerTimes(calculatePrayerTimes(location.lat, location.lng, new Date(), calcConfig));
       return;
     }
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLocation(loc);
-          setLocationDenied(false);
-          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
-          (async () => {
-            try {
-              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10&accept-language=en`);
-              if (geoRes.ok) {
-                const geoData = await geoRes.json();
-                const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
+
+    let cancelled = false;
+
+    (async () => {
+      // Request permission on native
+      if (isNativeGeo()) {
+        const granted = await requestLocationPermission();
+        if (!granted) {
+          if (!cancelled) {
+            setLocation({ lat: 21.4225, lng: 39.8262 });
+            setLocationDenied(true);
+          }
+          return;
+        }
+      }
+
+      const coords = await getCurrentLocation();
+      if (cancelled) return;
+
+      if (coords) {
+        const loc = { lat: coords.lat, lng: coords.lng };
+        setLocation(loc);
+        setLocationDenied(false);
+        try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
+        // Reverse geocode for the city name
+        (async () => {
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=10&accept-language=en`);
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
+              if (!cancelled) {
                 setLocationName(name);
                 try { localStorage.setItem('wird-location-name', name); } catch {}
               }
-            } catch {}
-          })();
-        },
-        () => {
-          const mecca = { lat: 21.4225, lng: 39.8262 };
-          setLocation(mecca);
+            }
+          } catch {}
+        })();
+      } else {
+        // Fallback to Mecca
+        if (!cancelled) {
+          setLocation({ lat: 21.4225, lng: 39.8262 });
           setLocationDenied(true);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      setLocation({ lat: 21.4225, lng: 39.8262 });
-      setLocationDenied(true);
-    }
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, calcConfig.method, calcConfig.madhab]);
 
-  const refreshLocation = useCallback(() => {
+  const refreshLocation = useCallback(async () => {
     try { localStorage.removeItem('wird-location'); } catch {}
     try { localStorage.removeItem('wird-location-name'); } catch {}
     setLocation(null);
     setLocationName(null);
     setPrayerTimes(null);
     setLocationDenied(false);
-  }, []);
+    // On native, re-request permission + location
+    if (isNativeGeo()) {
+      const granted = await requestLocationPermission();
+      if (granted) {
+        const coords = await getCurrentLocation();
+        if (coords) {
+          const loc = { lat: coords.lat, lng: coords.lng };
+          setLocation(loc);
+          setLocationDenied(false);
+          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
+          setPrayerTimes(calculatePrayerTimes(loc.lat, loc.lng, new Date(), calcConfig));
+        }
+      }
+    }
+  }, [calcConfig]);
 
   // ── Adhan Alarm State ──
   const [adhanEnabled, setAdhanEnabled] = useState(false);
@@ -3671,10 +3706,10 @@ export default function Home() {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab + (selectedSurah ?? '')}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
           >
             {activeTab === 'listen' && (
               <div className="hidden">{/* placeholder — ContinuousPlayer is rendered persistently below */}</div>

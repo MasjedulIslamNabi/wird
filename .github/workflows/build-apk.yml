@@ -68,6 +68,17 @@ jobs:
           retention-days: 30
           compression-level: 0
 
+      - name: Delete existing 'latest' release (prevent immutable release error)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/latest --jq '.id' 2>/dev/null || echo "")
+          if [ -n "$RELEASE_ID" ]; then
+            echo "Deleting existing release ID: $RELEASE_ID"
+            gh api -X DELETE repos/${{ github.repository }}/releases/$RELEASE_ID || true
+          fi
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/latest || true
+
       - name: Publish APK to "latest" release (stable download URL)
         uses: softprops/action-gh-release@v2
         with:

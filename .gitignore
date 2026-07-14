@@ -52,3 +52,13 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Capacitor / Android
+android/app/build/
+android/.gradle/
+android/local.properties
+android/captures/
+android/app/release/
+*.apk
+*.aab
+*.keystore
+!debug.keystore

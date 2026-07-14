@@ -1,60 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Static export for Capacitor (Android/iOS) — generates pure HTML/CSS/JS in out/
+  output: "export",
 
-  // Security headers (additional layer on top of middleware)
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          // Remove server fingerprinting
-          { key: "X-Powered-By", value: "" },
-        ],
-      },
-      {
-        // Protect Next.js internal routes
-        source: "/api/:path*",
-        headers: [
-          { key: "X-Powered-By", value: "" },
-        ],
-      },
-    ];
-  },
-
-  // Image optimization configuration
+  // Disable server-side image optimization (not available in static export)
   images: {
-    // Only allow images from trusted domains
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "cdn.islamic.network",
-      },
-    ],
+    unoptimized: true,
   },
 
-  // Redirects for SEO
-  async redirects() {
-    return [
-      {
-        source: "/home",
-        destination: "/",
-        permanent: true,
-      },
-      {
-        source: "/index.html",
-        destination: "/",
-        permanent: true,
-      },
-    ];
-  },
+  // Trailing slash for consistent routing in the static export
+  trailingSlash: true,
 
   typescript: {
     ignoreBuildErrors: true,
   },
 
-  // Enable strict mode for catching bugs in development
   reactStrictMode: true,
 };
 

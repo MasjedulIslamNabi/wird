@@ -8375,7 +8375,7 @@ function SettingsView({
           {typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent) && (
             <div className="space-y-3">
               <a
-                href="https://github.com/MasjedulIslamNabi/wird/releases/latest/download/app-debug.apk"
+                href="https://masjedulislamnabi.github.io/wird/app-debug.apk"
                 className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white font-semibold text-sm shadow-lg transition-all active:scale-95"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M17.523 15.341c-.247 0-.466.254-.466.501 0 .247.219.501.466.501.248 0 .466-.254.466-.501 0-.247-.218-.501-.466-.501m-3.058 1.663c0 .247.218.501.466.501.247 0 .466-.254.466-.501 0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501M22 12.5c0-1.252-.97-2.282-2.218-2.282-1.247 0-2.218 1.03-2.218 2.282 0 1.252.97 2.282 2.218 2.282C21.03 14.782 22 13.752 22 12.5m-2.218-2.282c-1.247 0-2.218 1.03-2.218 2.282 0 1.252.97 2.282 2.218 2.282 1.248 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282M5.672 14.341c0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501 0 .247.218.501.466.501.247 0 .466-.254.466-.501m1.064 1.663c0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501 0 .247.218.501.466.501.247 0 .466-.254.466-.501M2 8.5c0 1.252.97 2.282 2.218 2.282 1.247 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282C2.97 6.218 2 7.248 2 8.5M3.832 4.396c0 1.04.849 1.888 1.888 1.888 1.04 0 1.888-.849 1.888-1.888 0-1.04-.849-1.888-1.888-1.888-1.04 0-1.888.849-1.888 1.888M7.5 8.5c0 .998.811 1.809 1.809 1.809.998 0 1.809-.811 1.809-1.809 0-.998-.811-1.809-1.809-1.809C8.311 6.691 7.5 7.502 7.5 8.5m4.094 0c0 .998.811 1.809 1.809 1.809.998 0 1.809-.811 1.809-1.809 0-.998-.811-1.809-1.809-1.809-.998 0-1.809.811-1.809 1.809m4.156-4.104c0 1.04.849 1.888 1.888 1.888 1.04 0 1.888-.849 1.888-1.888 0-1.04-.849-1.888-1.888-1.888-1.04 0-1.888.849-1.888 1.888m5.656 4.104c0 1.252.97 2.282 2.218 2.282 1.248 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282-1.248 0-2.218 1.03-2.218 2.282"/></svg>
@@ -8419,7 +8419,7 @@ function SettingsView({
           {typeof navigator !== 'undefined' && !/android/i.test(navigator.userAgent) && !/iphone|ipad|ipod/i.test(navigator.userAgent) && (
             <div className="space-y-3">
               <a
-                href="https://github.com/MasjedulIslamNabi/wird/releases/latest/download/app-debug.apk"
+                href="https://masjedulislamnabi.github.io/wird/app-debug.apk"
                 className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white font-semibold text-sm shadow-lg transition-all active:scale-95"
               >
                 ⬇ Download Android APK

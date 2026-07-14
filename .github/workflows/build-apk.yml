@@ -73,7 +73,6 @@ jobs:
         with:
           tag_name: latest
           name: Wird Android (Latest Build)
-          make_latest: 'false'
           body: |
             ## Latest Android APK build
 

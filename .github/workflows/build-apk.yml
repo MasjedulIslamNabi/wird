@@ -73,6 +73,7 @@ jobs:
         with:
           tag_name: latest
           name: Wird Android (Latest Build)
+          make_latest: 'false'
           body: |
             ## Latest Android APK build
 
@@ -90,7 +91,6 @@ jobs:
             ```
             https://github.com/MasjedulIslamNabi/wird/releases/latest/download/app-debug.apk
             ```
-          prerelease: true
           files: |
             app-debug.apk
             wird-*.apk

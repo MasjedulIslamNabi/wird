@@ -1,10 +1,17 @@
-const CACHE_NAME = 'wird-v4';
-const AUDIO_CACHE = 'wird-audio-v4';
+const CACHE_NAME = 'wird-v6';
+const AUDIO_CACHE = 'wird-audio-v6';
+const ADHAN_CACHE = 'wird-adhan-v1';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [
   '/',
+  '/audio/adhan.mp3',
+  '/audio/adhan-fajr.mp3',
+  '/audio/dua-after-adhan.mp3',
 ];
+
+// Local adhan audio pattern (served from same origin)
+const ADHAN_CACHE_PATTERN = /\/audio\/(adhan|adhan-fajr|dua-after-adhan)\.mp3$/;
 
 // Allowed API patterns (defense-in-depth)
 const API_CACHE_PATTERN = /^https:\/\/api\.alquran\.cloud\/v1\//;
@@ -25,16 +32,32 @@ self.addEventListener('install', (event) => {
       });
     })
   );
+  // Also pre-cache adhan audio in its own cache for offline alarm use
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(PRECACHE_URLS).catch(() => {
+        // Ignore individual pre-cache failures — they'll be cached on first fetch
+      })
+    ).then(() =>
+      caches.open(ADHAN_CACHE).then((cache) =>
+        Promise.all([
+          '/audio/adhan.mp3',
+          '/audio/adhan-fajr.mp3',
+          '/audio/dua-after-adhan.mp3',
+        ].map((url) => cache.add(url).catch(() => {})))
+      )
+    )
+  );
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean old caches (preserve adhan cache too)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME && key !== AUDIO_CACHE)
+          .filter((key) => key !== CACHE_NAME && key !== AUDIO_CACHE && key !== ADHAN_CACHE)
           .map((key) => caches.delete(key))
       )
     )
@@ -57,7 +80,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Audio files: cache-first (large, immutable per URL)
+  // Local adhan files: cache-first from dedicated adhan cache (for offline alarm)
+  if (ADHAN_CACHE_PATTERN.test(url.pathname)) {
+    event.respondWith(
+      caches.open(ADHAN_CACHE).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response.ok) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => new Response('', { status: 503 }));
+        })
+      )
+    );
+    return;
+  }
+
+  // Remote Quran audio files: cache-first (large, immutable per URL)
   if (AUDIO_CACHE_PATTERN.test(url.href)) {
     event.respondWith(
       caches.open(AUDIO_CACHE).then((cache) =>
@@ -129,12 +170,97 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        if (response.ok && (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/icon-'))) {
+        if (response.ok && (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/icon-') || url.pathname.startsWith('/audio/'))) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
       });
+    })
+  );
+});
+
+// ─── Notification click handler ───────────────────────────────────────────
+// When the user taps any Wird notification, focus an existing app window
+// (or open a new one to '/'). Handles action buttons:
+//   - 'stop'     → tells the page to stop the Adhan
+//   - 'play'     → tells the page to play the Adhan (autoplay-blocked fallback)
+//   - default    → focus the app window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  const action = event.action || '';
+  const notifData = event.notification.data || {};
+
+  event.waitUntil(
+    (async () => {
+      const allClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      // Find a client on the Wird origin to receive the action message
+      let targetClient = null;
+      for (const client of allClients) {
+        try {
+          const u = new URL(client.url);
+          if (u.origin === self.location.origin) {
+            targetClient = client;
+            break;
+          }
+        } catch { /* ignore invalid URLs */ }
+      }
+
+      // If an action button was clicked, message the page
+      if (action === 'stop' && targetClient && 'postMessage' in targetClient) {
+        targetClient.postMessage({ type: 'wird:adhan-stop' });
+        if ('focus' in targetClient) await targetClient.focus();
+        return;
+      }
+      if (action === 'play' && targetClient && 'postMessage' in targetClient) {
+        targetClient.postMessage({ type: 'wird:adhan-play', prayerName: notifData.prayerName });
+        if ('focus' in targetClient) await targetClient.focus();
+        return;
+      }
+
+      // Default: focus existing client or open a new window
+      if (targetClient && 'focus' in targetClient) {
+        await targetClient.focus();
+        if (targetUrl !== '/' && 'postMessage' in targetClient) {
+          targetClient.postMessage({ type: 'wird:navigate', url: targetUrl });
+        }
+        return;
+      }
+
+      // No existing client — open a new window
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(targetUrl);
+      }
+    })()
+  );
+});
+
+// ─── Push event scaffold (for future server-side push) ────────────────────
+// Wired now so that when VAPID keys + a push subscription are added, the SW
+// is already prepared to surface notifications from background push events.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Wird', body: 'You have a new reminder.' };
+  try {
+    if (event.data) {
+      const text = event.data.text();
+      try { payload = JSON.parse(text); } catch { payload.body = text; }
+    }
+  } catch { /* ignore */ }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: payload.tag || 'wird-push',
+      requireInteraction: !!payload.requireInteraction,
+      silent: false,
     })
   );
 });

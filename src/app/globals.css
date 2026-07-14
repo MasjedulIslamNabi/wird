@@ -269,11 +269,22 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   overscroll-behavior-y: contain;
+  /* Smooth scrolling scoped to html only (was applied to `*` which fights
+     with iOS momentum scrolling and is wasteful). Also respect reduced motion. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Contain horizontal overflow so any individual component's overflow
+     does not cascade into a page-wide horizontal scrollbar on small phones.
+     `clip` is preferred over `hidden` because it preserves sticky positioning. */
+  overflow-x: clip;
 }
 
 /* Safe area insets for notched phones */
@@ -289,22 +300,103 @@ body {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
 }
 
-/* Smooth scrolling for mobile */
-@media (hover: none) {
-  * {
-    scroll-behavior: smooth;
-  }
-}
-
-/* Remove blue highlight on tap */
-button, a, input, textarea {
+/* Remove blue highlight on tap and disable double-tap-to-zoom on interactive
+   elements (saves the ~300ms click delay on legacy mobile browsers). */
+button, a, input, textarea, [role="tab"], [role="button"] {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Prevent text selection on interactive elements */
 button, nav, [role="tab"] {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Minimum touch target size helper (Apple HIG / Material = 44-48px).
+   Apply to icon buttons and small text buttons that fall below this size. */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ─── Range slider styling ──────────────────────────────────────────────────
+   `appearance-none` strips the native thumb, leaving the slider unusable on
+   touch. Restore a styled thumb that meets the 24px+ touch guideline.
+   Also style the track to use the app's gold accent. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(13, 75, 60, 0.15);
+}
+
+.dark input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(200, 169, 81, 0.2);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(13, 75, 60, 0.15);
+}
+
+.dark input[type="range"]::-moz-range-track {
+  background: rgba(200, 169, 81, 0.2);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #C8A951;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  margin-top: -9px; /* center on 6px track */
+  transition: transform 0.1s ease;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #C8A951;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.15);
+}
+
+/* ─── Firefox scrollbar styling ─────────────────────────────────────────────
+   WebKit/Blink uses ::-webkit-scrollbar (already defined in .islamic-scroll).
+   Firefox needs scrollbar-width + scrollbar-color on the scroll container. */
+.islamic-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #C8A951 transparent;
+}
+
+/* ─── Touch target enforcement for shadcn icon buttons ───────────────────────
+   shadcn `<Button size="icon">` defaults to h-9 w-9 (36px), below the 44px
+   minimum. Override to h-11 w-11 (44px) for accessibility compliance. */
+button[class*="h-9"][class*="w-9"]:not([class*="h-11"]):not([class*="h-10"]) {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Install banner animation */

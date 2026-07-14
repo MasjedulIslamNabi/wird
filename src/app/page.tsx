@@ -799,13 +799,1802 @@ const SITUATION_DUAS: SituationDua[] = [
   },
 ];
 
+// ─── iOS / Safari notification capability detection ─────────────────────
+// iOS Safari 16.4+ exposes `Notification` but `new Notification()` from a tab
+// is a no-op — only installed PWAs can actually fire notifications. Detect
+// this so we can guide the user to "Add to Home Screen" instead of silently
+// failing.
+function isIOSSafariNonPWA(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  // Safari on iOS reports no `criOS` (Chrome iOS) and no `FxiOS` (Firefox iOS)
+  const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+  if (!isIOS || !isSafari) return false;
+  // Installed PWA detection: navigator.standalone (legacy iOS) OR display-mode: standalone
+  const standalone = (window.navigator as any).standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+  return !standalone;
+}
+
+// Returns true if `new Notification()` will actually display on this platform.
+function notificationsActuallyWork(): boolean {
+  if (typeof window === 'undefined' || !('Notification' in window)) return false;
+  if (Notification.permission !== 'granted') return false;
+  if (isIOSSafariNonPWA()) return false;
+  return true;
+}
+
+// Returns true if the platform allows programmatic audio.play() without a user
+// gesture (i.e. NOT iOS Safari in a tab). iOS requires an audio "unlock" tap.
+function audioAutoplayBlocked(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+// ─── Service-Worker-backed notification helper ─────────────────────────────
+// Routes notifications through `registration.showNotification()` instead of
+// `new Notification()`. Benefits:
+//   1. Works when the page is backgrounded (Android Chrome keeps the SW alive).
+//   2. Supports `actions` array (action buttons on the notification).
+//   3. `notificationclick` handler in sw.js handles taps.
+// Falls back to `new Notification()` if the SW is not available.
+
+// NotificationAction is not in the current TS DOM lib; define it inline.
+interface WirdNotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
+async function showNotificationViaSW(
+  title: string,
+  options: NotificationOptions & { actions?: WirdNotificationAction[] },
+): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    // Fallback: page-level Notification
+    if ('Notification' in window && Notification.permission === 'granted' && !isIOSSafariNonPWA()) {
+      const n = new Notification(title, options);
+      n.onclick = () => { n.close(); window.focus(); };
+    }
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // SW showNotification supports actions; page-level new Notification does not.
+    await reg.showNotification(title, options);
+  } catch {
+    // SW not ready — fall back to page-level
+    if ('Notification' in window && Notification.permission === 'granted' && !isIOSSafariNonPWA()) {
+      const n = new Notification(title, options);
+      n.onclick = () => { n.close(); window.focus(); };
+    }
+  }
+}
+
+// ─── Curated Quran Verses for Notifications ───────────
+// Short, meaningful verses suitable for periodic reminders.
+// Each verse includes Arabic, English (Sahih International style),
+// Bengali translation, and reference (Surah:Ayah).
+
+interface QuranVerseNotif {
+  id: string;
+  arabic: string;
+  english: string;
+  bangla: string;
+  reference: string;        // e.g. "Al-Baqarah 2:153"
+  referenceAr: string;      // e.g. "البقرة ٢:١٥٣"
+  theme: string;            // e.g. "Patience"
+}
+
+const QURAN_VERSE_NOTIFICATIONS: QuranVerseNotif[] = [
+  {
+    id: 'v-tawheed-1',
+    arabic: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ',
+    english: 'Allah — there is no deity except Him, the Ever-Living, the Sustainer of [all] existence.',
+    bangla: 'আল্লাহ — তিনি ছাড়া কোনো উপাস্য নেই, চিরঞ্জীব, সর্ববিষয়ের ধারক।',
+    reference: 'Aal-E-Imran 3:2',
+    referenceAr: 'آل عمران ٣:٢',
+    theme: 'Tawheed',
+  },
+  {
+    id: 'v-tawheed-2',
+    arabic: 'قُلْ هُوَ اللَّهُ أَحَدٌ',
+    english: 'Say, He is Allah, [who is] One.',
+    bangla: 'বলো — তিনি আল্লাহ, এক।',
+    reference: 'Al-Ikhlas 112:1',
+    referenceAr: 'الإخلاص ١١٢:١',
+    theme: 'Tawheed',
+  },
+  {
+    id: 'v-tawheed-3',
+    arabic: 'اللَّهُ الصَّمَدُ',
+    english: 'Allah, the Eternal Refuge.',
+    bangla: 'আল্লাহ — যাঁর কাছে সবাই মুখাপেক্ষী, তিনি মুখাপেক্ষী নন।',
+    reference: 'Al-Ikhlas 112:2',
+    referenceAr: 'الإخلاص ١١٢:٢',
+    theme: 'Tawheed',
+  },
+  {
+    id: 'v-tawheed-4',
+    arabic: 'لَمْ يَلِدْ وَلَمْ يُولَدْ',
+    english: 'He neither begets nor is born.',
+    bangla: 'তিনি কাউকে জন্ম দেননি এবং তিনিও জন্ম নেননি।',
+    reference: 'Al-Ikhlas 112:3',
+    referenceAr: 'الإخلاص ١١٢:٣',
+    theme: 'Tawheed',
+  },
+  {
+    id: 'v-tawheed-5',
+    arabic: 'وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ',
+    english: 'And there is none comparable to Him.',
+    bangla: 'এবং তাঁর সমতুল্য কেউ নেই।',
+    reference: 'Al-Ikhlas 112:4',
+    referenceAr: 'الإخلاص ١١٢:٤',
+    theme: 'Tawheed',
+  },
+  {
+    id: 'v-faith-1',
+    arabic: 'إِنَّمَا الْمُؤْمِنُونَ الَّذِينَ آمَنُوا بِاللَّهِ وَرَسُولِهِ ثُمَّ لَمْ يَرْتَابُوا',
+    english: 'The believers are only the ones who have believed in Allah and His Messenger and then doubt not.',
+    bangla: 'মুমিন তো শুধু তারাই যারা আল্লাহ ও তাঁর রাসূলে ঈমান এনেছে, এরপর কোনো সন্দেহ পোষণ করেনি।',
+    reference: 'Al-Hujurat 49:15',
+    referenceAr: 'الحجرات ٤٩:١٥',
+    theme: 'Faith',
+  },
+  {
+    id: 'v-faith-2',
+    arabic: 'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ',
+    english: 'Who believe in the unseen, establish prayer.',
+    bangla: 'যারা গায়েবের ওপর ঈমান আনে ও সালাত কায়েম করে।',
+    reference: 'Al-Baqarah 2:3',
+    referenceAr: 'البقرة ٢:٣',
+    theme: 'Faith',
+  },
+  {
+    id: 'v-faith-3',
+    arabic: 'وَبَشِّرِ الْمُؤْمِنِينَ',
+    english: 'And give good tidings to the believers.',
+    bangla: 'আর মুমিনদের সুসংবাদ দাও।',
+    reference: 'As-Saff 61:13',
+    referenceAr: 'الصف ٦١:١٣',
+    theme: 'Faith',
+  },
+  {
+    id: 'v-faith-4',
+    arabic: 'إِنَّ الدِّينَ عِندَ اللَّهِ الْإِسْلَامُ',
+    english: 'Indeed, the religion in the sight of Allah is Islam.',
+    bangla: 'নিশ্চয়ই আল্লাহর কাছে একমাত্র দ্বীন হলো ইসলাম।',
+    reference: 'Aal-E-Imran 3:19',
+    referenceAr: 'آل عمران ٣:١٩',
+    theme: 'Faith',
+  },
+  {
+    id: 'v-faith-5',
+    arabic: 'وَمَنْ أَحْسَنُ دِينًا مِّمَّنْ أَسْلَمَ وَجْهَهُ لِلَّهِ وَهُوَ مُحْسِنٌ',
+    english: 'And who is better in religion than one who submits himself to Allah while being a doer of good?',
+    bangla: 'তার চেয়ে উত্তম দ্বীন কার, যে আল্লাহর কাছে আত্মসমর্পণ করে এবং সৎকর্মশীল হয়?',
+    reference: 'An-Nisa 4:125',
+    referenceAr: 'النساء ٤:١٢٥',
+    theme: 'Faith',
+  },
+  {
+    id: 'v-patience-1',
+    arabic: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ إِنَّ اللَّهَ مَعَ الصَّابِرِينَ',
+    english: 'O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.',
+    bangla: 'হে মুমিনগণ! তোমরা ধৈর্য ও সালাতের মাধ্যমে সাহায্য প্রার্থনা করো। নিশ্চয়ই আল্লাহ ধৈর্যশীলদের সাথে আছেন।',
+    reference: 'Al-Baqarah 2:153',
+    referenceAr: 'البقرة ٢:١٥٣',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-2',
+    arabic: 'إِنَّ اللَّهَ مَعَ الَّذِينَ اتَّقَوا وَّالَّذِينَ هُم مُّحْسِنُونَ',
+    english: 'Indeed, Allah is with those who fear Him and those who are doers of good.',
+    bangla: 'নিশ্চয়ই আল্লাহ তাদের সাথে আছেন যারা তাকওয়া অবলম্বন করে এবং যারা ইহসান করে।',
+    reference: 'An-Nahl 16:128',
+    referenceAr: 'النحل ١٦:١٢٨',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-3',
+    arabic: 'وَاللَّهُ يُحِبُّ الصَّابِرِينَ',
+    english: 'And Allah loves the patient.',
+    bangla: 'আর আল্লাহ ধৈর্যশীলদের ভালোবাসেন।',
+    reference: 'Aal-E-Imran 3:146',
+    referenceAr: 'آل عمران ٣:١٤٦',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-4',
+    arabic: 'إِنَّمَا يُوَفَّى الصَّابِرُونَ أَجْرَهُم بِغَيْرِ حِسَابٍ',
+    english: 'Indeed, the patient will be given their reward without account.',
+    bangla: 'নিশ্চয়ই ধৈর্যশীলদের প্রতিদান পূর্ণমাত্রায় বিনা হিসাবে দেওয়া হবে।',
+    reference: 'Az-Zumar 39:10',
+    referenceAr: 'الزمر ٣٩:١٠',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-5',
+    arabic: 'وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى الْخَاشِعِينَ',
+    english: 'And seek help through patience and prayer. It is indeed exacting, but not for the humble.',
+    bangla: 'আর তোমরা ধৈর্য ও সালাতের মাধ্যমে সাহায্য চাও। নিশ্চয়ই তা বড়, কিন্তু বিনয়ীদের জন্য নয়।',
+    reference: 'Al-Baqarah 2:45',
+    referenceAr: 'البقرة ٢:٤٥',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-6',
+    arabic: 'وَبَشِّرِ الصَّابِرِينَ',
+    english: 'And give good tidings to the patient.',
+    bangla: 'আর ধৈর্যশীলদের সুসংবাদ দাও।',
+    reference: 'Al-Baqarah 2:155',
+    referenceAr: 'البقرة ٢:١٥٥',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-7',
+    arabic: 'الَّذِينَ إِذَا أَصَابَتْهُم مُّصِيبَةٌ قَالُوا إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ',
+    english: 'Who, when disaster strikes them, say, ’Indeed we belong to Allah, and indeed to Him we will return.’',
+    bangla: 'যারা বিপদে পড়লে বলে — ’নিশ্চয়ই আমরা আল্লাহর জন্য এবং নিশ্চয়ই আমরা তাঁরই দিকে ফিরে যাব।’',
+    reference: 'Al-Baqarah 2:156',
+    referenceAr: 'البقرة ٢:١٥٦',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-8',
+    arabic: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اصْبِرُوا وَصَابِرُوا وَرَابِطُوا وَاتَّقُوا اللَّهَ لَعَلَّكُمْ تُفْلِحُونَ',
+    english: 'O you who have believed, persevere and endure and remain stationed and fear Allah that you may be successful.',
+    bangla: 'হে মুমিনগণ! তোমরা ধৈর্য ধারণ করো, পরস্পরকে ধৈর্যে প্রতিযোগিতায় এগিয়ে রাখো, সীমান্তে অবস্থান করো এবং আল্লাহকে ভয় করো যাতে তোমরা সফল হতে পারো।',
+    reference: 'Aal-E-Imran 3:200',
+    referenceAr: 'آل عمران ٣:٢٠٠',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-9',
+    arabic: 'وَلَنَبْلُوَنَّكُم بِشَيْءٍ مِّنَ الْخَوْفِ وَالْجُوعِ وَنَقْصٍ مِّنَ الْأَمْوَالِ وَالْأَنفُسِ وَالثَّمَرَاتِ ۗ وَبَشِّرِ الصَّابِرِينَ',
+    english: 'We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient.',
+    bangla: 'আমরা অবশ্যই তোমাদের পরীক্ষা করব কিছু ভয়, ক্ষুধা, সম্পদ, জীবন ও ফলের ক্ষতি দিয়ে। আর ধৈর্যশীলদের সুসংবাদ দাও।',
+    reference: 'Al-Baqarah 2:155',
+    referenceAr: 'البقرة ٢:١٥٥',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-patience-10',
+    arabic: 'فَاصْبِرْ كَمَا صَبَرَ أُولُو الْعَزْمِ مِنَ الرُّسُلِ',
+    english: 'So be patient, [O Muhammad], as were those of determination among the messengers.',
+    bangla: 'কাজেই তুমি ধৈর্য ধারণ করো, যেমন ধৈর্য ধারণ করেছিলেন দৃঢ়প্রতিজ্ঞ রাসূলগণ।',
+    reference: 'Al-Ahqaf 46:35',
+    referenceAr: 'الأحقاف ٤٦:٣٥',
+    theme: 'Patience',
+  },
+  {
+    id: 'v-mercy-1',
+    arabic: 'وَرَحْمَتِي وَسِعَتْ كُلَّ شَيْءٍ',
+    english: 'My mercy encompasses all things.',
+    bangla: 'আমার রহমত সবকিছুকে পরিবেষ্টন করে আছে।',
+    reference: 'Al-A’raf 7:156',
+    referenceAr: 'الأعراف ٧:١٥٦',
+    theme: 'Mercy',
+  },
+  {
+    id: 'v-mercy-2',
+    arabic: 'الرَّحْمَٰنِ الرَّحِيمِ',
+    english: 'The Entirely Merciful, the Especially Merciful.',
+    bangla: 'পরম করুণাময়, অসীম দয়ালু।',
+    reference: 'Al-Fatihah 1:3',
+    referenceAr: 'الفاتحة ١:٣',
+    theme: 'Mercy',
+  },
+  {
+    id: 'v-mercy-3',
+    arabic: 'إِنَّ اللَّهَ غَفُورٌ رَّحِيمٌ',
+    english: 'Indeed, Allah is Forgiving and Merciful.',
+    bangla: 'নিশ্চয়ই আল্লাহ ক্ষমাশীল, পরম দয়ালু।',
+    reference: 'Al-Baqarah 2:173',
+    referenceAr: 'البقرة ٢:١٧٣',
+    theme: 'Mercy',
+  },
+  {
+    id: 'v-mercy-4',
+    arabic: 'نَبْتَغِي رَحْمَةً مِّن رَّبِّكَ إِنَّ اللَّهَ كَانَ غَفُورًا رَّحِيمًا',
+    english: 'We seek the mercy of your Lord. Indeed, He is ever Forgiving and Merciful.',
+    bangla: 'আমরা তোমার রবের কাছে রহমত প্রার্থনা করি। নিশ্চয়ই তিনি ক্ষমাশীল, পরম দয়ালু।',
+    reference: 'Al-Isra 17:28',
+    referenceAr: 'الإسراء ١٧:٢٨',
+    theme: 'Mercy',
+  },
+  {
+    id: 'v-mercy-5',
+    arabic: 'وَرَحْمَتُ اللَّهِ وَفَضْلُهُ خَيْرٌ لِّمَا يَجْمَعُونَ',
+    english: 'And the mercy of Allah and His favor are better than whatever they accumulate.',
+    bangla: 'আল্লাহর রহমত ও তাঁর অনুগ্রহ তাদের সঞ্চিত সম্পদের চেয়ে উত্তম।',
+    reference: 'Al-Jumu’ah 62:11',
+    referenceAr: 'الجمعة ٦٢:١١',
+    theme: 'Mercy',
+  },
+  {
+    id: 'v-forgiveness-1',
+    arabic: 'قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنفُسِهِمْ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ',
+    english: 'Say, ’O My servants who have transgressed against themselves, do not despair of the mercy of Allah.’',
+    bangla: 'বলো — হে আমার বান্দাগণ যারা নিজেদের প্রতি সীমালঙ্ঘন করেছ, তোমরা আল্লাহর রহমত থেকে নিরাশ হয়ো না।',
+    reference: 'Az-Zumar 39:53',
+    referenceAr: 'الزمر ٣٩:٥٣',
+    theme: 'Forgiveness',
+  },
+  {
+    id: 'v-forgiveness-2',
+    arabic: 'إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا',
+    english: 'Indeed, Allah forgives all sins.',
+    bangla: 'নিশ্চয়ই আল্লাহ সমস্ত গুনাহ ক্ষমা করেন।',
+    reference: 'Az-Zumar 39:53',
+    referenceAr: 'الزمر ٣٩:٥٣',
+    theme: 'Forgiveness',
+  },
+  {
+    id: 'v-forgiveness-3',
+    arabic: 'وَمَن يَتُبْ مِنْ إِثْمِهِ وَهُوَ ظَالِمٌ فَأُولَٰئِكَ يَتُوبُ اللَّهُ عَلَيْهِمْ',
+    english: 'And whoever repents of his sin while he is a wrongdoer — those are the ones to whom Allah turns in forgiveness.',
+    bangla: 'যে তার পাপ থেকে তওবা করে যখন সে জালেম, তাদেরকে আল্লাহ ক্ষমা করে দেন।',
+    reference: 'An-Nisa 4:17',
+    referenceAr: 'النساء ٤:١٧',
+    theme: 'Forgiveness',
+  },
+  {
+    id: 'v-forgiveness-4',
+    arabic: 'رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ',
+    english: 'Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.',
+    bangla: 'হে আমাদের রব! আমরা নিজেদের প্রতি জুলুম করেছি। আপনি যদি আমাদের ক্ষমা না করেন ও রহমত না করেন তবে আমরা অবশ্যই ক্ষতিগ্রস্ত হব।',
+    reference: 'Al-A’raf 7:23',
+    referenceAr: 'الأعراف ٧:٢٣',
+    theme: 'Forgiveness',
+  },
+  {
+    id: 'v-forgiveness-5',
+    arabic: 'وَالَّذِينَ إِذَا فَعَلُوا فَاحِشَةً أَوْ ظَلَمُوا أَنفُسَهُمْ ذَكَرُوا اللَّهَ فَاسْتَغْفَرُوا لِذُنُوبِهِمْ',
+    english: 'And those who, when they commit an immorality or wrong themselves [by transgression], remember Allah and seek forgiveness for their sins.',
+    bangla: 'যারা কোনো অশ্লীল কাজ করে ফেললে বা নিজেদের প্রতি জুলুম করলে আল্লাহকে স্মরণ করে এবং তাদের গুনাহর জন্য ক্ষমা চায়।',
+    reference: 'Aal-E-Imran 3:135',
+    referenceAr: 'آل عمران ٣:١٣٥',
+    theme: 'Forgiveness',
+  },
+  {
+    id: 'v-gratitude-1',
+    arabic: 'وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِنْ شَكَرْتُمْ لَأَزِيدَنَّكُمْ',
+    english: 'And [remember] when your Lord proclaimed, ’If you are grateful, I will surely increase you.’',
+    bangla: 'স্মরণ করো, তোমার রব ঘোষণা করেছিলেন — তোমরা কৃতজ্ঞ হলে আমি অবশ্যই তোমাদের আরও বৃদ্ধি করব।',
+    reference: 'Ibrahim 14:7',
+    referenceAr: 'إبراهيم ١٤:٧',
+    theme: 'Gratitude',
+  },
+  {
+    id: 'v-gratitude-2',
+    arabic: 'فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ',
+    english: 'So remember Me; I will remember you. And be grateful to Me and do not deny Me.',
+    bangla: 'কাজেই তোমরা আমাকে স্মরণ করো, আমিও তোমাদের স্মরণ করব। আর তোমরা আমার কৃতজ্ঞতা প্রকাশ করো এবং অকৃতজ্ঞ হয়ো না।',
+    reference: 'Al-Baqarah 2:152',
+    referenceAr: 'البقرة ٢:١٥٢',
+    theme: 'Gratitude',
+  },
+  {
+    id: 'v-gratitude-3',
+    arabic: 'لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ ۖ وَلَئِن كَفَرْتُمْ إِنَّ عَذَابِي لَشَدِيدٌ',
+    english: 'If you are grateful, I will surely increase you; but if you deny, indeed, My punishment is severe.',
+    bangla: 'তোমরা কৃতজ্ঞ হলে অবশ্যই আমি তোমাদের বৃদ্ধি করব। আর তোমরা অকৃতজ্ঞ হলে নিশ্চয়ই আমার শাস্তি কঠিন।',
+    reference: 'Ibrahim 14:7',
+    referenceAr: 'إبراهيم ١٤:٧',
+    theme: 'Gratitude',
+  },
+  {
+    id: 'v-gratitude-4',
+    arabic: 'وَمَن شَكَرَ فَإِنَّمَا يَشْكُرُ لِنَفْسِهِ ۖ وَمَن كَفَرَ فَإِنَّ رَبِّي غَنِيٌّ كَرِيمٌ',
+    english: 'And whoever is grateful, he is grateful for himself. And whoever is ungrateful — indeed, my Lord is Free of need and Generous.',
+    bangla: 'যে কৃতজ্ঞ হয় সে তো নিজেরই কল্যাণের জন্য কৃতজ্ঞ হয়। আর যে অকৃতজ্ঞ হয় — নিশ্চয়ই আমার রব অভাবমুক্ত, উদার।',
+    reference: 'An-Naml 27:40',
+    referenceAr: 'النمل ٢٧:٤٠',
+    theme: 'Gratitude',
+  },
+  {
+    id: 'v-gratitude-5',
+    arabic: 'مَّا يَفْعَلُ اللَّهُ بِعَذَابِكُمْ إِن شَكَرْتُمْ وَآمَنتُمْ',
+    english: 'What would Allah do with your punishment if you are grateful and believe?',
+    bangla: 'তোমরা যদি কৃতজ্ঞ হও ও ঈমান আনো তবে তোমাদের শাস্তি দিয়ে আল্লাহ কী করবেন?',
+    reference: 'An-Nisa 4:147',
+    referenceAr: 'النساء ٤:١٤٧',
+    theme: 'Gratitude',
+  },
+  {
+    id: 'v-provision-1',
+    arabic: 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا ۝ وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ',
+    english: 'And whoever fears Allah — He will make for him a way out. And will provide for him from where he does not expect.',
+    bangla: 'যে আল্লাহকে ভয় করে, তিনি তার জন্য বের হবার পথ করে দেন এবং তাকে এমন উৎস থেকে রিযিক দেন যা সে কল্পনাও করে না।',
+    reference: 'At-Talaq 65:2-3',
+    referenceAr: 'الطلاق ٦٥:٢-٣',
+    theme: 'Provision',
+  },
+  {
+    id: 'v-provision-2',
+    arabic: 'وَفِي السَّمَاءِ رِزْقُكُمْ وَمَا تُوعَدُونَ',
+    english: 'And in the heaven is your provision and whatever you are promised.',
+    bangla: 'আর আসমানেই রয়েছে তোমাদের রিযিক ও যা তোমাদের প্রতিশ্রুতি দেওয়া হয়েছে।',
+    reference: 'Ad-Dhariyat 51:22',
+    referenceAr: 'الذاريات ٥١:٢٢',
+    theme: 'Provision',
+  },
+  {
+    id: 'v-provision-3',
+    arabic: 'إِنَّ اللَّهَ هُوَ الرَّزَّاقُ ذُو الْقُوَّةِ الْمَتِينُ',
+    english: 'Indeed, it is Allah who is the [continual] Provider, the firm possessor of strength.',
+    bangla: 'নিশ্চয়ই আল্লাহই একমাত্র রিযিকদাতা, পরাক্রমশালী, শক্তিমান।',
+    reference: 'Ad-Dhariyat 51:58',
+    referenceAr: 'الذاريات ٥١:٥٨',
+    theme: 'Provision',
+  },
+  {
+    id: 'v-provision-4',
+    arabic: 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مِنْ أَمْرِهِ يُسْرًا',
+    english: 'And whoever fears Allah — He will make for him of his matter ease.',
+    bangla: 'যে আল্লাহকে ভয় করে, তিনি তার কাজের জন্য সহজ পথ করে দেন।',
+    reference: 'At-Talaq 65:4',
+    referenceAr: 'الطلاق ٦٥:٤',
+    theme: 'Provision',
+  },
+  {
+    id: 'v-provision-5',
+    arabic: 'وَأَن لَّيْسَ لِلْإِنسَانِ إِلَّا مَا سَعَىٰ',
+    english: 'And that there is not for man except that [good] for which he strives.',
+    bangla: 'এবং মানুষের জন্য তা ছাড়া আর কিছু নেই যা সে চেষ্টা করে।',
+    reference: 'An-Najm 53:39',
+    referenceAr: 'النجم ٥٣:٣٩',
+    theme: 'Provision',
+  },
+  {
+    id: 'v-relief-1',
+    arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+    english: 'Indeed, with hardship [will be] ease.',
+    bangla: 'নিশ্চয়ই কষ্টের সাথেই রয়েছে স্বস্তি।',
+    reference: 'Ash-Sharh 94:6',
+    referenceAr: 'الشرح ٩٤:٦',
+    theme: 'Relief',
+  },
+  {
+    id: 'v-relief-2',
+    arabic: 'فَإِنَّ مَعَ الْعُسْرِ يُسْرًا ۝ إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+    english: 'So, indeed, with hardship [will be] ease. Indeed, with hardship [will be] ease.',
+    bangla: 'সুতরাং নিশ্চয়ই কষ্টের সাথে রয়েছে স্বস্তি। নিশ্চয়ই কষ্টের সাথে রয়েছে স্বস্তি।',
+    reference: 'Ash-Sharh 94:5-6',
+    referenceAr: 'الشرح ٩٤:٥-٦',
+    theme: 'Relief',
+  },
+  {
+    id: 'v-hope-1',
+    arabic: 'وَبَشِّرِ الصَّابِرِينَ',
+    english: 'And give good tidings to the patient.',
+    bangla: 'আর ধৈর্যশীলদের সুসংবাদ দাও।',
+    reference: 'Al-Baqarah 2:155',
+    referenceAr: 'البقرة ٢:١٥٥',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-2',
+    arabic: 'لَا تَهِنُوا وَلَا تَحْزَنُوا وَأَنتُمُ الْأَعْلَوْنَ إِن كُنتُم مُّؤْمِنِينَ',
+    english: 'Do not weaken and do not grieve, and you will be superior if you are [true] believers.',
+    bangla: 'তোমরা দুর্বল হয়ো না এবং চিন্তিত হয়ো না — যদি তোমরা মুমিন হও তবে তোমরাই শ্রেষ্ঠ।',
+    reference: 'Aal-E-Imran 3:139',
+    referenceAr: 'آل عمران ٣:١٣٩',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-3',
+    arabic: 'وَلَا تَيْأَسُوا مِن رَّوْحِ اللَّهِ ۖ إِنَّهُ لَا يَيْأَسُ مِن رَّوْحِ اللَّهِ إِلَّا الْقَوْمُ الْكَافِرُونَ',
+    english: 'And do not despair of relief from Allah. Indeed, no one despairs of relief from Allah except the disbelieving people.',
+    bangla: 'আর আল্লাহর রহমত থেকে নিরাশ হয়ো না। নিশ্চয়ই আল্লাহর রহমত থেকে কাফের সম্প্রদায় ছাড়া আর কেউ নিরাশ হয় না।',
+    reference: 'Yusuf 12:87',
+    referenceAr: 'يوسف ١٢:٨٧',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-4',
+    arabic: 'وَلَا تَخَفْ وَلَا تَحْزَنْ إِنَّا مُنَجُّوكَ وَأَهْلَكَ',
+    english: 'And do not fear and do not grieve. Indeed, We will save you and your family.',
+    bangla: 'ভয় করো না এবং চিন্তা করো না। নিশ্চয়ই আমরা তোমাকে ও তোমার পরিবারকে রক্ষা করব।',
+    reference: 'Al-Ankabut 29:33',
+    referenceAr: 'العنكبوت ٢٩:٣٣',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-5',
+    arabic: 'قَالَ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ',
+    english: 'He said, ’Do not despair of the mercy of Allah.’',
+    bangla: 'তিনি বললেন — আল্লাহর রহমত থেকে নিরাশ হয়ো না।',
+    reference: 'Yusuf 12:87',
+    referenceAr: 'يوسف ١٢:٨٧',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-6',
+    arabic: 'إِنَّ رَبَّكَ وَاسِعُ الْمَغْفِرَةِ',
+    english: 'Indeed, your Lord is vast in forgiveness.',
+    bangla: 'নিশ্চয়ই তোমার রব ক্ষমায় প্রশস্ত।',
+    reference: 'An-Najm 53:32',
+    referenceAr: 'النجم ٥٣:٣٢',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-7',
+    arabic: 'وَهُوَ الَّذِي يُنَزِّلُ الْغَيْثَ مِن بَعْدِ مَا قَنَطُوا',
+    english: 'And it is He who sends down the rain after they had despaired.',
+    bangla: 'তিনিই বৃষ্টি বর্ষণ করেন তাদের নিরাশ হওয়ার পর।',
+    reference: 'Ash-Shura 42:28',
+    referenceAr: 'الشورى ٤٢:٢٨',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-hope-8',
+    arabic: 'لَا تَحْزَنْ إِنَّ اللَّهَ مَعَنَا',
+    english: 'Do not grieve; indeed Allah is with us.',
+    bangla: 'চিন্তা করো না, নিশ্চয়ই আল্লাহ আমাদের সাথে আছেন।',
+    reference: 'At-Tawbah 9:40',
+    referenceAr: 'التوبة ٩:٤٠',
+    theme: 'Hope',
+  },
+  {
+    id: 'v-trust-1',
+    arabic: 'وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ',
+    english: 'And whoever places his trust in Allah — He is sufficient for him.',
+    bangla: 'যে আল্লাহর ওপর ভরসা করে, তার জন্য তিনিই যথেষ্ট।',
+    reference: 'At-Talaq 65:3',
+    referenceAr: 'الطلاق ٦٥:٣',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-2',
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+    english: 'Sufficient for us is Allah, and [He is] the best Disposer of affairs.',
+    bangla: 'আমাদের জন্য আল্লাহই যথেষ্ট এবং তিনি কতই উত্তম কর্মবিধায়ক।',
+    reference: 'Aal-E-Imran 3:173',
+    referenceAr: 'آل عمران ٣:١٧٣',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-3',
+    arabic: 'وَعَلَى اللَّهِ فَلْيَتَوَكَّلِ الْمُؤْمِنُونَ',
+    english: 'And upon Allah let the believers rely.',
+    bangla: 'আর মুমিনদের উচিত আল্লাহর ওপরই ভরসা করা।',
+    reference: 'At-Tawbah 9:51',
+    referenceAr: 'التوبة ٩:٥١',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-4',
+    arabic: 'وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ ۚ إِنَّ اللَّهَ بَالِغُ أَمْرِهِ',
+    english: 'And whoever places his trust in Allah — He is sufficient for him. Indeed, Allah will accomplish His purpose.',
+    bangla: 'যে আল্লাহর ওপর ভরসা করে, তার জন্য তিনিই যথেষ্ট। নিশ্চয়ই আল্লাহ তাঁর কাজ পূর্ণ করবেন।',
+    reference: 'At-Talaq 65:3',
+    referenceAr: 'الطلاق ٦٥:٣',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-5',
+    arabic: 'إِنِّي تَوَكَّلْتُ عَلَى اللَّهِ رَبِّي وَرَبِّكُمْ',
+    english: 'Indeed, I have relied upon Allah, my Lord and your Lord.',
+    bangla: 'নিশ্চয়ই আমি আল্লাহর ওপর ভরসা করেছি, যিনি আমার ও তোমাদের রব।',
+    reference: 'Hud 11:56',
+    referenceAr: 'هود ١١:٥٦',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-6',
+    arabic: 'فَإِذَا عَزَمْتَ فَتَوَكَّلْ عَلَى اللَّهِ',
+    english: 'So when you have decided, then rely upon Allah.',
+    bangla: 'কাজেই যখন সিদ্ধান্ত নিবে, তখন আল্লাহর ওপর ভরসা করো।',
+    reference: 'Aal-E-Imran 3:159',
+    referenceAr: 'آل عمران ٣:١٥٩',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-7',
+    arabic: 'وَاللَّهُ خَيْرٌ وَأَبْقَىٰ',
+    english: 'And Allah is better and more enduring.',
+    bangla: 'আর আল্লাহই শ্রেষ্ঠ ও স্থায়ী।',
+    reference: 'Ta-Ha 20:73',
+    referenceAr: 'طه ٢٠:٧٣',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-8',
+    arabic: 'وَكَفَىٰ بِاللَّهِ وَكِيلًا',
+    english: 'And sufficient is Allah as Disposer of affairs.',
+    bangla: 'আর কর্মবিধায়ক হিসেবে আল্লাহই যথেষ্ট।',
+    reference: 'An-Nisa 4:81',
+    referenceAr: 'النساء ٤:٨١',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-9',
+    arabic: 'وَمَن يُؤْمِن بِاللَّهِ يَهْدِ قَلْبَهُ',
+    english: 'And whoever believes in Allah — He will guide his heart.',
+    bangla: 'যে আল্লাহর ওপর ঈমান আনে, তিনি তার অন্তরকে হিদায়েত করেন।',
+    reference: 'At-Taghabun 64:11',
+    referenceAr: 'التغابن ٦٤:١١',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-trust-10',
+    arabic: 'أَلَيْسَ اللَّهُ بِكَافٍ عَبْدَهُ',
+    english: 'Is not Allah sufficient for His servant?',
+    bangla: 'আল্লাহ কি তাঁর বান্দার জন্য যথেষ্ট নন?',
+    reference: 'Az-Zumar 39:36',
+    referenceAr: 'الزمر ٣٩:٣٦',
+    theme: 'Trust',
+  },
+  {
+    id: 'v-peace-1',
+    arabic: 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+    english: 'Unquestionably, by the remembrance of Allah hearts are assured.',
+    bangla: 'জেনে রেখো — আল্লাহর স্মরণেই অন্তরসমূহ প্রশান্তি লাভ করে।',
+    reference: 'Ar-Ra’d 13:28',
+    referenceAr: 'الرعد ١٣:٢٨',
+    theme: 'Peace',
+  },
+  {
+    id: 'v-peace-2',
+    arabic: 'الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ',
+    english: 'Those who have believed and whose hearts are assured by the remembrance of Allah.',
+    bangla: 'যারা ঈমান এনেছে এবং যাদের অন্তর আল্লাহর স্মরণে প্রশান্ত।',
+    reference: 'Ar-Ra’d 13:28',
+    referenceAr: 'الرعد ١٣:٢٨',
+    theme: 'Peace',
+  },
+  {
+    id: 'v-peace-3',
+    arabic: 'سَلَامٌ قَوْلًا مِّن رَّبٍّ رَّحِيمٍ',
+    english: 'Peace, a word from a Merciful Lord.',
+    bangla: 'সালাম — একটি কথা দয়াময় রবের পক্ষ থেকে।',
+    reference: 'Ya-Sin 36:58',
+    referenceAr: 'يس ٣٦:٥٨',
+    theme: 'Peace',
+  },
+  {
+    id: 'v-peace-4',
+    arabic: 'وَاللَّهُ يَدْعُو إِلَىٰ دَارِ السَّلَامِ',
+    english: 'And Allah invites to the Home of Peace.',
+    bangla: 'আর আল্লাহ শান্তির গৃহের দিকে আহ্বান করেন।',
+    reference: 'Yunus 10:25',
+    referenceAr: 'يونس ١٠:٢٥',
+    theme: 'Peace',
+  },
+  {
+    id: 'v-peace-5',
+    arabic: 'ادْفَعْ بِالَّتِي هِيَ أَحْسَنُ السَّيِّئَةَ',
+    english: 'Repel [evil] by that [deed] which is better.',
+    bangla: 'মন্দকে উত্তম দ্বারা প্রতিহত করো।',
+    reference: 'Fussilat 41:34',
+    referenceAr: 'فصلت ٤١:٣٤',
+    theme: 'Peace',
+  },
+  {
+    id: 'v-remembrance-1',
+    arabic: 'فَاذْكُرُونِي أَذْكُرْكُمْ',
+    english: 'So remember Me; I will remember you.',
+    bangla: 'কাজেই তোমরা আমাকে স্মরণ করো, আমিও তোমাদের স্মরণ করব।',
+    reference: 'Al-Baqarah 2:152',
+    referenceAr: 'البقرة ٢:١٥٢',
+    theme: 'Remembrance',
+  },
+  {
+    id: 'v-remembrance-2',
+    arabic: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اذْكُرُوا اللَّهَ ذِكْرًا كَثِيرًا',
+    english: 'O you who have believed, remember Allah with much remembrance.',
+    bangla: 'হে মুমিনগণ! তোমরা আল্লাহকে অধিক পরিমাণে স্মরণ করো।',
+    reference: 'Al-Ahzab 33:41',
+    referenceAr: 'الأحزاب ٣٣:٤١',
+    theme: 'Remembrance',
+  },
+  {
+    id: 'v-remembrance-3',
+    arabic: 'وَلَذِكْرُ اللَّهِ أَكْبَرُ',
+    english: 'And the remembrance of Allah is greater.',
+    bangla: 'আর আল্লাহর স্মরণই সর্বশ্রেষ্ঠ।',
+    reference: 'Al-Ankabut 29:45',
+    referenceAr: 'العنكبوت ٢٩:٤٥',
+    theme: 'Remembrance',
+  },
+  {
+    id: 'v-remembrance-4',
+    arabic: 'الَّذِينَ يَذْكُرُونَ اللَّهَ قِيَامًا وَقُعُودًا وَعَلَىٰ جُنُوبِهِمْ',
+    english: 'Who remember Allah while standing or sitting or [lying] on their sides.',
+    bangla: 'যারা দাঁড়িয়ে, বসে ও শুয়ে আল্লাহকে স্মরণ করে।',
+    reference: 'Aal-E-Imran 3:191',
+    referenceAr: 'آل عمران ٣:١٩١',
+    theme: 'Remembrance',
+  },
+  {
+    id: 'v-remembrance-5',
+    arabic: 'فَإِذَا فَرَغْتَ فَانصَبْ ۝ وَإِلَىٰ رَبِّكَ فَارْغَب',
+    english: 'So when you have finished [your duties], then stand up [for worship]. And to your Lord direct your craving.',
+    bangla: 'কাজেই যখন তুমি অবসর পাও, তখন সালাতে দাঁড়াও। আর তোমার রবের দিকেই কেবল বাসনা করো।',
+    reference: 'Ash-Sharh 94:7-8',
+    referenceAr: 'الشرح ٩٤:٧-٨',
+    theme: 'Remembrance',
+  },
+  {
+    id: 'v-knowledge-1',
+    arabic: 'رَّبِّ زِدْنِي عِلْمًا',
+    english: 'My Lord, increase me in knowledge.',
+    bangla: 'হে আমার রব! আমার জ্ঞান বৃদ্ধি করো।',
+    reference: 'Ta-Ha 20:114',
+    referenceAr: 'طه ٢٠:١١٤',
+    theme: 'Knowledge',
+  },
+  {
+    id: 'v-knowledge-2',
+    arabic: 'يَرْفَعِ اللَّهُ الَّذِينَ آمَنُوا مِنكُمْ وَالَّذِينَ أُوتُوا الْعِلْمَ دَرَجَاتٍ',
+    english: 'Allah will raise those who have believed among you and those who were given knowledge, by degrees.',
+    bangla: 'আল্লাহ তোমাদের মধ্যে যারা ঈমান এনেছে ও যাদের জ্ঞান দেওয়া হয়েছে তাদের মর্যাদা উন্নীত করবেন।',
+    reference: 'Al-Mujadila 58:11',
+    referenceAr: 'المجادلة ٥٨:١١',
+    theme: 'Knowledge',
+  },
+  {
+    id: 'v-knowledge-3',
+    arabic: 'إِنَّمَا يَخْشَى اللَّهَ مِنْ عِبَادِهِ الْعُلَمَاءُ',
+    english: 'Only those fear Allah, from among His servants, who have knowledge.',
+    bangla: 'আল্লাহর বান্দাদের মধ্যে কেবল জ্ঞানীরাই তাঁকে ভয় করে।',
+    reference: 'Fatir 35:28',
+    referenceAr: 'فاطر ٣٥:٢٨',
+    theme: 'Knowledge',
+  },
+  {
+    id: 'v-knowledge-4',
+    arabic: 'وَقُل رَّبِّ زِدْنِي عِلْمًا',
+    english: 'And say, My Lord, increase me in knowledge.',
+    bangla: 'আর বলো — হে আমার রব! আমার জ্ঞান বৃদ্ধি করো।',
+    reference: 'Ta-Ha 20:114',
+    referenceAr: 'طه ٢٠:١١٤',
+    theme: 'Knowledge',
+  },
+  {
+    id: 'v-knowledge-5',
+    arabic: 'هَلْ يَسْتَوِي الَّذِينَ يَعْلَمُونَ وَالَّذِينَ لَا يَعْلَمُونَ',
+    english: 'Are those who know equal to those who do not know?',
+    bangla: 'যারা জানে এবং যারা জানে না, তারা কি সমান?',
+    reference: 'Az-Zumar 39:9',
+    referenceAr: 'الزمر ٣٩:٩',
+    theme: 'Knowledge',
+  },
+  {
+    id: 'v-wisdom-1',
+    arabic: 'وَمَن يُؤْتَ الْحِكْمَةَ فَقَدْ أُوتِيَ خَيْرًا كَثِيرًا',
+    english: 'And whoever is given wisdom — he has been given much good.',
+    bangla: 'যাকে জ্ঞান দান করা হয়েছে, তাকে প্রচুর কল্যাণ দান করা হয়েছে।',
+    reference: 'Al-Baqarah 2:269',
+    referenceAr: 'البقرة ٢:٢٦٩',
+    theme: 'Wisdom',
+  },
+  {
+    id: 'v-wisdom-2',
+    arabic: 'يُؤْتِي الْحِكْمَةَ مَن يَشَاءُ ۚ وَمَن يُؤْتَ الْحِكْمَةَ فَقَدْ أُوتِيَ خَيْرًا كَثِيرًا',
+    english: 'He gives wisdom to whom He wills, and whoever has been given wisdom has certainly been given much good.',
+    bangla: 'তিনি যাকে ইচ্ছা হিকমত দান করেন। আর যাকে হিকমত দেওয়া হয়েছে তাকে প্রচুর কল্যাণ দেওয়া হয়েছে।',
+    reference: 'Al-Baqarah 2:269',
+    referenceAr: 'البقرة ٢:٢٦٩',
+    theme: 'Wisdom',
+  },
+  {
+    id: 'v-wisdom-3',
+    arabic: 'ادْعُ إِلَىٰ سَبِيلِ رَبِّكَ بِالْحِكْمَةِ وَالْمَوْعِظَةِ الْحَسَنَةِ',
+    english: 'Invite to the way of your Lord with wisdom and good instruction.',
+    bangla: 'তুমি হিকমত ও উত্তম উপদেশের মাধ্যমে তোমার রবের পথে আহ্বান করো।',
+    reference: 'An-Nahl 16:125',
+    referenceAr: 'النحل ١٦:١٢٥',
+    theme: 'Wisdom',
+  },
+  {
+    id: 'v-wisdom-4',
+    arabic: 'وَلَقَدْ آتَيْنَا لُقْمَانَ الْحِكْمَةَ',
+    english: 'And We had certainly given Luqman wisdom.',
+    bangla: 'আর অবশ্যই আমরা লুকমানকে হিকমত দান করেছিলাম।',
+    reference: 'Luqman 31:12',
+    referenceAr: 'لقمان ٣١:١٢',
+    theme: 'Wisdom',
+  },
+  {
+    id: 'v-wisdom-5',
+    arabic: 'يَا أَيُّهَا الَّذِينَ آمَنُوا اتَّقُوا اللَّهَ وَكُونُوا مَعَ الصَّادِقِينَ',
+    english: 'O you who have believed, fear Allah and be with those who are true.',
+    bangla: 'হে মুমিনগণ! তোমরা আল্লাহকে ভয় করো এবং সত্যবাদীদের সাথে থাকো।',
+    reference: 'At-Tawbah 9:119',
+    referenceAr: 'التوبة ٩:١١٩',
+    theme: 'Wisdom',
+  },
+  {
+    id: 'v-prayer-1',
+    arabic: 'وَأَقِيمُوا الصَّلَاةَ لِذِكْرِي',
+    english: 'And establish prayer for My remembrance.',
+    bangla: 'আর আমার স্মরণের জন্য সালাত কায়েম করো।',
+    reference: 'Ta-Ha 20:14',
+    referenceAr: 'طه ٢٠:١٤',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-2',
+    arabic: 'إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا',
+    english: 'Indeed, prayer has been decreed upon the believers a decree of specified times.',
+    bangla: 'নিশ্চয়ই মুমিনদের ওপর সালাত নির্ধারিত সময়ে ফরজ করা হয়েছে।',
+    reference: 'An-Nisa 4:103',
+    referenceAr: 'النساء ٤:١٠٣',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-3',
+    arabic: 'اتْلُ مَا أُوحِيَ إِلَيْكَ مِنَ الْكِتَابِ وَأَقِمِ الصَّلَاةَ',
+    english: 'Recite what has been revealed to you of the Book and establish prayer.',
+    bangla: 'তোমার প্রতি অবতীর্ণ কিতাব তিলাওয়াত করো এবং সালাত কায়েম করো।',
+    reference: 'Al-Ankabut 29:45',
+    referenceAr: 'العنكبوت ٢٩:٤٥',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-4',
+    arabic: 'وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ',
+    english: 'And seek help through patience and prayer.',
+    bangla: 'আর তোমরা ধৈর্য ও সালাতের মাধ্যমে সাহায্য চাও।',
+    reference: 'Al-Baqarah 2:45',
+    referenceAr: 'البقرة ٢:٤٥',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-5',
+    arabic: 'وَأَقِيمُوا الصَّلَاةَ وَآتُوا الزَّكَاةَ',
+    english: 'And establish prayer and give zakah.',
+    bangla: 'আর তোমরা সালাত কায়েম করো ও যাকাত দাও।',
+    reference: 'Al-Baqarah 2:43',
+    referenceAr: 'البقرة ٢:٤٣',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-6',
+    arabic: 'إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ',
+    english: 'Indeed, prayer prohibits immorality and wrongdoing.',
+    bangla: 'নিশ্চয়ই সালাত অশ্লীল ও খারাপ কাজ থেকে বিরত রাখে।',
+    reference: 'Al-Ankabut 29:45',
+    referenceAr: 'العنكبوت ٢٩:٤٥',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-7',
+    arabic: 'حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ',
+    english: 'Maintain with care the [obligatory] prayers and [in particular] the middle prayer.',
+    bangla: 'তোমরা সালাতসমূহের হেফাজত করো, বিশেষত মধ্যবর্তী সালাতের।',
+    reference: 'Al-Baqarah 2:238',
+    referenceAr: 'البقرة ٢:٢٣٨',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-8',
+    arabic: 'قَدْ أَفْلَحَ الْمُؤْمِنُونَ ۝ الَّذِينَ هُمْ فِي صَلَاتِهِمْ خَاشِعُونَ',
+    english: 'Certainly will the believers have succeeded — They who are during their prayer humbly submissive.',
+    bangla: 'নিশ্চয়ই মুমিনগণ সফলকাম হয়েছে — যারা তাদের সালাতে বিনয়ী।',
+    reference: 'Al-Mu’minun 23:1-2',
+    referenceAr: 'المؤمنون ٢٣:١-٢',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-9',
+    arabic: 'فَوَيْلٌ لِّلْمُصَلِّينَ ۝ الَّذِينَ هُمْ عَن صَلَاتِهِمْ سَاهُونَ',
+    english: 'So woe to those who pray — but are unaware of their prayer.',
+    bangla: 'কাজেই ধ্বংস সেই সালাত আদায়কারীদের জন্য — যারা তাদের সালাত সম্পর্কে উদাসীন।',
+    reference: 'Al-Ma’un 107:4-5',
+    referenceAr: 'الماعون ١٠٧:٤-٥',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-prayer-10',
+    arabic: 'وَأَنْ أَقِمْ وَجْهَكَ لِلدِّينِ حَنِيفًا',
+    english: 'And to incline your face toward the correct religion.',
+    bangla: 'এবং তুমি একনিষ্ঠভাবে দ্বীনের দিকে মুখ ফেরাও।',
+    reference: 'Ar-Rum 30:43',
+    referenceAr: 'الروم ٣٠:٤٣',
+    theme: 'Prayer',
+  },
+  {
+    id: 'v-charity-1',
+    arabic: 'مَّن ذَا الَّذِي يُقْرِضُ اللَّهَ قَرْضًا حَسَنًا فَيُضَاعِفَهُ لَهُ أَضْعَافًا كَثِيرَةً',
+    english: 'Who is it that would loan Allah a goodly loan so He may multiply it for him many times over?',
+    bangla: 'কে সেই ব্যক্তি যে আল্লাহকে উত্তম ঋণ দান করবে, যাতে তিনি তা তার জন্য বহুগুণ বৃদ্ধি করে দেন?',
+    reference: 'Al-Baqarah 2:245',
+    referenceAr: 'البقرة ٢:٢٤٥',
+    theme: 'Charity',
+  },
+  {
+    id: 'v-charity-2',
+    arabic: 'وَمَا تُنفِقُوا مِنْ خَيْرٍ فَلِأَنفُسِكُمْ',
+    english: 'And whatever you spend of good — it is for yourselves.',
+    bangla: 'আর তোমরা যা কল্যাণে ব্যয় করো, তা তোমাদের নিজেদের জন্যই।',
+    reference: 'Al-Baqarah 2:272',
+    referenceAr: 'البقرة ٢:٢٧٢',
+    theme: 'Charity',
+  },
+  {
+    id: 'v-charity-3',
+    arabic: 'وَمَا أَنفَقْتُم مِّن شَيْءٍ فَهُوَ يُخْلِفُهُ ۖ وَهُوَ خَيْرُ الرَّازِقِينَ',
+    english: 'And whatever you spend of anything — He will replace it. And He is the best of providers.',
+    bangla: 'আর তোমরা যা কিছু ব্যয় করো, তিনি তার পরিবর্তে দেবেন। তিনি সর্বোত্তম রিযিকদাতা।',
+    reference: 'Saba 34:39',
+    referenceAr: 'سبأ ٣٤:٣٩',
+    theme: 'Charity',
+  },
+  {
+    id: 'v-charity-4',
+    arabic: 'مَّثَلُ الَّذِينَ يُنفِقُونَ أَمْوَالَهُمْ فِي سَبِيلِ اللَّهِ كَمَثَلِ حَبَّةٍ أَنبَتَتْ سَبْعَ سَنَابِلَ',
+    english: 'The example of those who spend their wealth in the way of Allah is like a seed [of grain] which grows seven spikes.',
+    bangla: 'যারা আল্লাহর পথে নিজেদের সম্পদ ব্যয় করে, তাদের উপমা একটি বীজের মতো, যা থেকে সাতটি শীষ উৎপন্ন হয়।',
+    reference: 'Al-Baqarah 2:261',
+    referenceAr: 'البقرة ٢:٢٦١',
+    theme: 'Charity',
+  },
+  {
+    id: 'v-charity-5',
+    arabic: 'وَأَنفِقُوا مِمَّا جَعَلَكُم مُّسْتَخْلَفِينَ فِيهِ',
+    english: 'And spend out of that in which He has made you successors.',
+    bangla: 'আর তোমাদেরকে যা দিয়ে উত্তরাধিকারী করা হয়েছে তা থেকে ব্যয় করো।',
+    reference: 'Al-Hadid 57:7',
+    referenceAr: 'الحديد ٥٧:٧',
+    theme: 'Charity',
+  },
+  {
+    id: 'v-kindness-1',
+    arabic: 'وَقُولُوا لِلنَّاسِ حُسْنًا',
+    english: 'And speak to people good [words].',
+    bangla: 'আর মানুষের সাথে সুন্দর কথা বলো।',
+    reference: 'Al-Baqarah 2:83',
+    referenceAr: 'البقرة ٢:٨٣',
+    theme: 'Kindness',
+  },
+  {
+    id: 'v-kindness-2',
+    arabic: 'وَاخْفِضْ جَنَاحَكَ لِلْمُؤْمِنِينَ',
+    english: 'And lower your wing to the believers.',
+    bangla: 'আর মুমিনদের প্রতি নম্র হও।',
+    reference: 'Al-Hijr 15:88',
+    referenceAr: 'الحجر ١٥:٨٨',
+    theme: 'Kindness',
+  },
+  {
+    id: 'v-kindness-3',
+    arabic: 'وَاعْبُدُوا اللَّهَ وَلَا تُشْرِكُوا بِهِ شَيْئًا ۖ وَبِالْوَالِدَيْنِ إِحْسَانًا',
+    english: 'Worship Allah and associate nothing with Him, and to parents, good treatment.',
+    bangla: 'আল্লাহর ইবাদত করো এবং তাঁর সাথে কাউকে শরীক করো না। আর পিতা-মাতার প্রতি সদ্ব্যবহার করো।',
+    reference: 'An-Nisa 4:36',
+    referenceAr: 'النساء ٤:٣٦',
+    theme: 'Kindness',
+  },
+  {
+    id: 'v-kindness-4',
+    arabic: 'وَقَضَىٰ رَبُّكَ أَلَّا تَعْبُدُوا إِلَّا إِيَّاهُ وَبِالْوَالِدَيْنِ إِحْسَانًا',
+    english: 'And your Lord has decreed that you not worship except Him, and to parents, good treatment.',
+    bangla: 'তোমার রব নির্দেশ দিয়েছেন যে তোমরা তাঁকে ছাড়া অন্য কারো ইবাদত করবে না এবং পিতা-মাতার প্রতি সদ্ব্যবহার করবে।',
+    reference: 'Al-Isra 17:23',
+    referenceAr: 'الإسراء ١٧:٢٣',
+    theme: 'Kindness',
+  },
+  {
+    id: 'v-kindness-5',
+    arabic: 'وَقُولُوا لَهُمَا قَوْلًا كَرِيمًا ۝ وَاخْفِضْ لَهُمَا جَنَاحَ الذُّلِّ مِنَ الرَّحْمَةِ',
+    english: 'And speak to them noble words. And lower to them the wing of humility out of mercy.',
+    bangla: 'আর তাদের প্রতি করুণাময় বিনয়ী হও এবং বিনয়ের সাথে তাদের প্রতি কোমল কথা বলো।',
+    reference: 'Al-Isra 17:23-24',
+    referenceAr: 'الإسراء ١٧:٢٣-٢٤',
+    theme: 'Kindness',
+  },
+  {
+    id: 'v-strength-1',
+    arabic: 'لَا تَهِنُوا وَلَا تَحْزَنُوا وَأَنتُمُ الْأَعْلَوْنَ إِن كُنتُم مُّؤْمِنِينَ',
+    english: 'Do not weaken and do not grieve, and you will be superior if you are [true] believers.',
+    bangla: 'তোমরা দুর্বল হয়ো না এবং চিন্তিত হয়ো না — যদি তোমরা মুমিন হও তবে তোমরাই শ্রেষ্ঠ।',
+    reference: 'Aal-E-Imran 3:139',
+    referenceAr: 'آل عمران ٣:١٣٩',
+    theme: 'Strength',
+  },
+  {
+    id: 'v-strength-2',
+    arabic: 'كَتَبَ اللَّهُ لَأَغْلِبَنَّ أَنَا وَرُسُلِي ۚ إِنَّ اللَّهَ قَوِيٌّ عَزِيزٌ',
+    english: 'Allah has written, ’I will surely overcome, I and My messengers.’ Indeed, Allah is Powerful and Exalted in Might.',
+    bangla: 'আল্লাহ লিখে দিয়েছেন — আমি ও আমার রাসূলগণ অবশ্যই বিজয়ী হব। নিশ্চয়ই আল্লাহ শক্তিমান, পরাক্রমশালী।',
+    reference: 'Al-Mujadila 58:21',
+    referenceAr: 'المجادلة ٥٨:٢١',
+    theme: 'Strength',
+  },
+  {
+    id: 'v-strength-3',
+    arabic: 'وَلَا تَهِنُوا فِي ابْتِغَاءِ الْقَوْمِ ۚ إِن تَكُونُوا تَأْلَمُوا فَإِنَّهُمْ يَأْلَمُونَ كَمَا تَأْلَمُونَ',
+    english: 'And do not weaken in pursuit of the enemy. If you should be suffering, indeed they suffer as you suffer.',
+    bangla: 'জনগণের সন্ধানে তোমরা দুর্বল হয়ো না। তোমরা যদি কষ্ট পাও, তবে তারাও তোমাদের মতোই কষ্ট পায়।',
+    reference: 'An-Nisa 4:104',
+    referenceAr: 'النساء ٤:١٠٤',
+    theme: 'Strength',
+  },
+  {
+    id: 'v-strength-4',
+    arabic: 'كَم مِّن فِئَةٍ قَلِيلَةٍ غَلَبَتْ فِئَةً كَثِيرَةً بِإِذْنِ اللَّهِ',
+    english: 'How many a small company has overcome a large company by permission of Allah.',
+    bangla: 'কত ছোট দল আল্লাহর অনুমতিক্রমে বড় দলের ওপর বিজয় লাভ করেছে।',
+    reference: 'Al-Baqarah 2:249',
+    referenceAr: 'البقرة ٢:٢٤٩',
+    theme: 'Strength',
+  },
+  {
+    id: 'v-strength-5',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ الَّذِينَ يُقَاتِلُونَ فِي سَبِيلِهِ صَفًّا',
+    english: 'Indeed, Allah loves those who fight in His cause in a row.',
+    bangla: 'নিশ্চয়ই আল্লাহ তাদের ভালোবাসেন যারা তাঁর পথে সারিবদ্ধভাবে লড়াই করে।',
+    reference: 'As-Saff 61:4',
+    referenceAr: 'الصف ٦١:٤',
+    theme: 'Strength',
+  },
+  {
+    id: 'v-courage-1',
+    arabic: 'الَّذِينَ قَالَ لَهُمُ النَّاسُ إِنَّ النَّاسَ قَدْ جَمَعُوا لَكُمْ فَاخْشَوْهُمْ فَزَادَهُمْ إِيمَانًا',
+    english: '[They are] those to whom people said, ’Indeed, the people have gathered against you, so fear them.’ But it [merely] increased them in faith.',
+    bangla: 'যাদেরকে মানুষ বলেছিল — মানুষ তোমাদের বিরুদ্ধে একত্রিত হয়েছে, কাজেই তাদের ভয় করো। কিন্তু তাতে তাদের ঈমান বৃদ্ধি পেল।',
+    reference: 'Aal-E-Imran 3:173',
+    referenceAr: 'آل عمران ٣:١٧٣',
+    theme: 'Courage',
+  },
+  {
+    id: 'v-courage-2',
+    arabic: 'فَلَا تَخْشَوُهُمْ وَاخْشَوْنِي',
+    english: 'So fear them not, but fear Me.',
+    bangla: 'কাজেই তোমরা তাদের ভয় করো না, আমাকে ভয় করো।',
+    reference: 'Al-Ma’idah 5:3',
+    referenceAr: 'المائدة ٥:٣',
+    theme: 'Courage',
+  },
+  {
+    id: 'v-courage-3',
+    arabic: 'إِنَّمَا ذَٰلِكُمُ الشَّيْطَانُ يُخَوِّفُ أَوْلِيَاءَهُ فَلَا تَخَافُوهُمْ وَخَافُونِ إِن كُنتُم مُّؤْمِنِينَ',
+    english: 'That is only Satan frightening [you] through his allies. So fear them not, but fear Me, if you are believers.',
+    bangla: 'এটা তো কেবল শয়তান তার বন্ধুদের মাধ্যমে ভয় দেখাচ্ছে। কাজেই তোমরা তাদের ভয় করো না, আমাকে ভয় করো যদি মুমিন হও।',
+    reference: 'Aal-E-Imran 3:175',
+    referenceAr: 'آل عمران ٣:١٧٥',
+    theme: 'Courage',
+  },
+  {
+    id: 'v-courage-4',
+    arabic: 'وَلَا تَهِنُوا وَلَا تَحْزَنُوا وَأَنتُمُ الْأَعْلَوْنَ',
+    english: 'And do not weaken and do not grieve, and you will be superior.',
+    bangla: 'তোমরা দুর্বল হয়ো না এবং চিন্তিত হয়ো না — তোমরাই শ্রেষ্ঠ।',
+    reference: 'Aal-E-Imran 3:139',
+    referenceAr: 'آل عمران ٣:١٣٩',
+    theme: 'Courage',
+  },
+  {
+    id: 'v-courage-5',
+    arabic: 'وَجَاهِدُوا فِي اللَّهِ حَقَّ جِهَادِهِ',
+    english: 'And strive for Allah with the striving due to Him.',
+    bangla: 'আর তোমরা আল্লাহর পথে তাঁর যোগ্য সংগ্রাম করো।',
+    reference: 'Al-Hajj 22:78',
+    referenceAr: 'الحج ٢٢:٧٨',
+    theme: 'Courage',
+  },
+  {
+    id: 'v-paradise-1',
+    arabic: 'وَبَشِّرِ الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ أَنَّ لَهُمْ جَنَّاتٍ تَجْرِي مِن تَحْتِهَا الْأَنْهَارُ',
+    english: 'And give good tidings to those who believe and do righteous deeds that they will have gardens [in Paradise] beneath which rivers flow.',
+    bangla: 'আর যারা ঈমান এনেছে ও সৎকাজ করেছে তাদের সুসংবাদ দাও যে তাদের জন্য রয়েছে জান্নাত, যার তলদেশ দিয়ে নদীসমূহ প্রবাহিত।',
+    reference: 'Al-Baqarah 2:25',
+    referenceAr: 'البقرة ٢:٢٥',
+    theme: 'Paradise',
+  },
+  {
+    id: 'v-paradise-2',
+    arabic: 'جَنَّاتُ عَدْنٍ مُّفَتَّحَةً لَّهُمُ الْأَبْوَابُ',
+    english: 'Gardens of perpetual residence, whose doors will be opened to them.',
+    bangla: 'চিরস্থায়ী জান্নাত, যার দরজাসমূহ তাদের জন্য খোলা থাকবে।',
+    reference: 'Sad 38:50',
+    referenceAr: 'ص ٣٨:٥٠',
+    theme: 'Paradise',
+  },
+  {
+    id: 'v-paradise-3',
+    arabic: 'مَّثَلُ الْجَنَّةِ الَّتِي وُعِدَ الْمُتَّقُونَ',
+    english: 'The description of Paradise which the righteous have been promised.',
+    bangla: 'সেই জান্নাতের বর্ণনা যা মুত্তাকীদের প্রতিশ্রুতি দেওয়া হয়েছে।',
+    reference: 'Muhammad 47:15',
+    referenceAr: 'محمد ٤٧:١٥',
+    theme: 'Paradise',
+  },
+  {
+    id: 'v-paradise-4',
+    arabic: 'وَلِمَنْ خَافَ مَقَامَ رَبِّهِ جَنَّتَانِ',
+    english: 'But for he who has feared the position of his Lord are two gardens.',
+    bangla: 'আর যে তার রবের সামনে দাঁড়ানোকে ভয় করেছে, তার জন্য রয়েছে দুটি জান্নাত।',
+    reference: 'Ar-Rahman 55:46',
+    referenceAr: 'الرحمن ٥٥:٤٦',
+    theme: 'Paradise',
+  },
+  {
+    id: 'v-paradise-5',
+    arabic: 'ادْخُلُوهَا بِسَلَامٍ آمِنِينَ',
+    english: 'Enter it in peace, safe [and secure].',
+    bangla: 'তোমরা নিরাপদে শান্তির সাথে এতে প্রবেশ করো।',
+    reference: 'Al-Hijr 15:46',
+    referenceAr: 'الحجر ١٥:٤٦',
+    theme: 'Paradise',
+  },
+  {
+    id: 'v-reward-1',
+    arabic: 'إِنَّمَا يُوَفَّى الصَّابِرُونَ أَجْرَهُم بِغَيْرِ حِسَابٍ',
+    english: 'Indeed, the patient will be given their reward without account.',
+    bangla: 'নিশ্চয়ই ধৈর্যশীলদের প্রতিদান পূর্ণমাত্রায় বিনা হিসাবে দেওয়া হবে।',
+    reference: 'Az-Zumar 39:10',
+    referenceAr: 'الزمر ٣٩:١٠',
+    theme: 'Reward',
+  },
+  {
+    id: 'v-reward-2',
+    arabic: 'مَنْ عَمِلَ صَالِحًا فَلِنَفْسِهِ',
+    english: 'Whoever does righteousness — it is for his [own] soul.',
+    bangla: 'যে সৎকাজ করে, তা তার নিজেরই কল্যাণের জন্য।',
+    reference: 'Fussilat 41:46',
+    referenceAr: 'فصلت ٤١:٤٦',
+    theme: 'Reward',
+  },
+  {
+    id: 'v-reward-3',
+    arabic: 'وَأَن لَّيْسَ لِلْإِنسَانِ إِلَّا مَا سَعَىٰ',
+    english: 'And that there is not for man except that [good] for which he strives.',
+    bangla: 'এবং মানুষের জন্য তা ছাড়া আর কিছু নেই যা সে চেষ্টা করে।',
+    reference: 'An-Najm 53:39',
+    referenceAr: 'النجم ٥٣:٣٩',
+    theme: 'Reward',
+  },
+  {
+    id: 'v-reward-4',
+    arabic: 'إِنَّ أَجْرَكُمْ عِندَ اللَّهِ خَيْرٌ لِّمَنْ آمَنَ وَاتَّقَىٰ',
+    english: 'Indeed, your reward is with Allah — better for one who believes and fears Allah.',
+    bangla: 'নিশ্চয়ই তোমাদের প্রতিদান আল্লাহর কাছেই — যে ঈমান আনে ও তাকওয়া অবলম্বন করে তার জন্য তা উত্তম।',
+    reference: 'Yusuf 12:90',
+    referenceAr: 'يوسف ١٢:٩٠',
+    theme: 'Reward',
+  },
+  {
+    id: 'v-reward-5',
+    arabic: 'فَاسْتَبِقُوا الْخَيْرَاتِ',
+    english: 'So race to [all that is] good.',
+    bangla: 'কাজেই তোমরা কল্যাণের দিকে ধাবিত হও।',
+    reference: 'Al-Baqarah 2:148',
+    referenceAr: 'البقرة ٢:١٤٨',
+    theme: 'Reward',
+  },
+  {
+    id: 'v-guidance-1',
+    arabic: 'إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ',
+    english: 'Indeed, this Qur’an guides to that which is most suitable.',
+    bangla: 'নিশ্চয়ই এই কুরআন সরল পথে হিদায়েত করে।',
+    reference: 'Al-Isra 17:9',
+    referenceAr: 'الإسراء ١٧:٩',
+    theme: 'Guidance',
+  },
+  {
+    id: 'v-guidance-2',
+    arabic: 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
+    english: 'Guide us to the straight path.',
+    bangla: 'আমাদের সরল পথ দেখাও।',
+    reference: 'Al-Fatihah 1:6',
+    referenceAr: 'الفاتحة ١:٦',
+    theme: 'Guidance',
+  },
+  {
+    id: 'v-guidance-3',
+    arabic: 'وَمَن يَهْتَدِ فَإِنَّمَا يَهْتَدِي لِنَفْسِهِ',
+    english: 'And whoever is guided is only guided for [the benefit of] his soul.',
+    bangla: 'আর যে হিদায়েত পায়, সে তো নিজেরই কল্যাণের জন্য হিদায়েত পায়।',
+    reference: 'Yunus 10:108',
+    referenceAr: 'يونس ١٠:١٠٨',
+    theme: 'Guidance',
+  },
+  {
+    id: 'v-guidance-4',
+    arabic: 'وَالَّذِينَ اهْتَدَوْا زَادَهُمْ هُدًى',
+    english: 'And those who are guided — He increases them in guidance.',
+    bangla: 'আর যারা হিদায়েত পেয়েছে, তিনি তাদের হিদায়েত বৃদ্ধি করেন।',
+    reference: 'Muhammad 47:17',
+    referenceAr: 'محمد ٤٧:١٧',
+    theme: 'Guidance',
+  },
+  {
+    id: 'v-guidance-5',
+    arabic: 'إِنَّكَ لَتَهْدِي إِلَىٰ صِرَاطٍ مُّسْتَقِيمٍ',
+    english: 'Indeed, [O Muhammad], you guide to a straight path.',
+    bangla: 'নিশ্চয়ই তুমি সরল পথে হিদায়েত করো।',
+    reference: 'Ash-Shura 42:52',
+    referenceAr: 'الشورى ٤٢:٥٢',
+    theme: 'Guidance',
+  },
+  {
+    id: 'v-truth-1',
+    arabic: 'وَقُل جَاءَ الْحَقُّ وَزَهَقَ الْبَاطِلُ ۚ إِنَّ الْبَاطِلَ كَانَ زَهُوقًا',
+    english: 'And say, ’Truth has come, and falsehood has departed. Indeed is falsehood, [by nature], ever bound to depart.’',
+    bangla: 'আর বলো — সত্য এসেছে এবং মিথ্যা বিলুপ্ত হয়েছে। নিশ্চয়ই মিথ্যা বিলুপ্ত হওয়ারই ছিল।',
+    reference: 'Al-Isra 17:81',
+    referenceAr: 'الإسراء ١٧:٨١',
+    theme: 'Truth',
+  },
+  {
+    id: 'v-truth-2',
+    arabic: 'إِنَّ اللَّهَ هُوَ الْحَقُّ',
+    english: 'Indeed, Allah is the Truth.',
+    bangla: 'নিশ্চয়ই আল্লাহই সত্য।',
+    reference: 'An-Nur 24:25',
+    referenceAr: 'النور ٢٤:٢٥',
+    theme: 'Truth',
+  },
+  {
+    id: 'v-truth-3',
+    arabic: 'فَلَا تَدْعُ مَعَ اللَّهِ أَحَدًا',
+    english: 'So do not invoke with Allah anyone.',
+    bangla: 'কাজেই তুমি আল্লাহর সাথে অন্য কাউকে ডেকো না।',
+    reference: 'Al-Jinn 72:18',
+    referenceAr: 'الجن ٧٢:١٨',
+    theme: 'Truth',
+  },
+  {
+    id: 'v-truth-4',
+    arabic: 'وَبِالْحَقِّ أَنزَلْنَاهُ وَبِالْحَقِّ نَزَلَ',
+    english: 'And with the truth We have sent it down and with the truth it has descended.',
+    bangla: 'আর সত্য সহকারে আমরা একে নাজিল করেছি এবং সত্য সহকারেই এটি নাজিল হয়েছে।',
+    reference: 'Al-Isra 17:105',
+    referenceAr: 'الإسراء ١٧:١٠৫',
+    theme: 'Truth',
+  },
+  {
+    id: 'v-truth-5',
+    arabic: 'ذَٰلِكَ بِأَنَّ اللَّهَ هُوَ الْحَقُّ وَأَنَّ مَا يَدْعُونَ مِن دُونِهِ هُوَ الْبَاطِلُ',
+    english: 'That is because Allah is the Truth, and that what they call upon besides Him is falsehood.',
+    bangla: 'এটা এ কারণে যে আল্লাহই সত্য এবং তারা তাঁকে ছাড়া যাকে ডাকে তা মিথ্যা।',
+    reference: 'Al-Hajj 22:62',
+    referenceAr: 'الحج ٢٢:٦٢',
+    theme: 'Truth',
+  },
+  {
+    id: 'v-time-1',
+    arabic: 'وَالْعَصْرِ ۝ إِنَّ الْإِنسَانَ لَفِي خُسْرٍ',
+    english: 'By time. Indeed, mankind is in loss.',
+    bangla: 'শপথ কালের। নিশ্চয়ই মানুষ ক্ষতিগ্রস্ত।',
+    reference: 'Al-Asr 103:1-2',
+    referenceAr: 'العصر ١٠٣:١-٢',
+    theme: 'Time',
+  },
+  {
+    id: 'v-time-2',
+    arabic: 'خَلَقَ السَّمَاوَاتِ وَالْأَرْضَ فِي سِتَّةِ أَيَّامٍ',
+    english: 'He created the heavens and earth in six days.',
+    bangla: 'তিনি ছয় দিনে আসমান ও যমীন সৃষ্টি করেছেন।',
+    reference: 'Yunus 10:3',
+    referenceAr: 'يونس ١٠:٣',
+    theme: 'Time',
+  },
+  {
+    id: 'v-time-3',
+    arabic: 'إِنَّ يَوْمَ الْفَصْلِ مِيقَاتُهُمْ أَجْمَعِينَ',
+    english: 'Indeed, the Day of Judgement is the appointed time for them all.',
+    bangla: 'নিশ্চয়ই বিচার দিবস তাদের সবার নির্ধারিত সময়।',
+    reference: 'Ad-Dukhan 44:40',
+    referenceAr: 'الدخان ٤٤:٤٠',
+    theme: 'Time',
+  },
+  {
+    id: 'v-life-1',
+    arabic: 'كُلُّ نَفْسٍ ذَائِقَةُ الْمَوْتِ ۗ وَإِنَّمَا تُوَفَّوْنَ أُجُورَكُمْ يَوْمَ الْقِيَامَةِ',
+    english: 'Every soul will taste death, and you will only be given your [full] reward on the Day of Resurrection.',
+    bangla: 'প্রত্যেক প্রাণী মৃত্যুর স্বাদ আস্বাদন করবে। আর কিয়ামতের দিনেই তোমাদের প্রতিদান পূর্ণ দেওয়া হবে।',
+    reference: 'Aal-E-Imran 3:185',
+    referenceAr: 'آل عمران ٣:١٨٥',
+    theme: 'Life',
+  },
+  {
+    id: 'v-life-2',
+    arabic: 'وَمَا هَٰذِهِ الْحَيَاةُ الدُّنْيَا إِلَّا لَهْوٌ وَلَعِبٌ ۚ وَإِنَّ الدَّارَ الْآخِرَةَ لَهِيَ الْحَيَوَانُ',
+    english: 'And this worldly life is not but diversion and amusement. And indeed, the home of the Hereafter — that is the [eternal] life.',
+    bangla: 'আর এই পার্থিব জীবন তো কেবল খেলা ও বিনোদন। আর পরকালের গৃহই প্রকৃত জীবন।',
+    reference: 'Al-Ankabut 29:64',
+    referenceAr: 'العنكبوت ٢٩:٦٤',
+    theme: 'Life',
+  },
+  {
+    id: 'v-life-3',
+    arabic: 'اعْلَمُوا أَنَّمَا الْحَيَاةُ الدُّنْيَا لَعِبٌ وَلَهْوٌ وَزِينَةٌ وَتَفَاخُرٌ بَيْنَكُمْ',
+    english: 'Know that the worldly life is only play and amusement and adornment and boasting to one another.',
+    bangla: 'জেনে রেখো পার্থিব জীবন কেবল খেলা, বিনোদন, সাজসজ্জা ও পরস্পরের মধ্যে অহংকার।',
+    reference: 'Al-Hadid 57:20',
+    referenceAr: 'الحديد ٥٧:٢٠',
+    theme: 'Life',
+  },
+  {
+    id: 'v-life-4',
+    arabic: 'وَابْتَغِ فِيمَا آتَاكَ اللَّهُ الدَّارَ الْآخِرَةَ ۖ وَلَا تَنسَ نَصِيبَكَ مِنَ الدُّنْيَا',
+    english: 'But seek, through that which Allah has given you, the home of the Hereafter; and [yet], do not forget your share of the world.',
+    bangla: 'আর আল্লাহ তোমাকে যা দিয়েছেন তার মাধ্যমে পরকালের গৃহ অন্বেষণ করো। আর পার্থিব অংশ ভুলে যেও না।',
+    reference: 'Al-Qasas 28:77',
+    referenceAr: 'القصص ٢٨:٧٧',
+    theme: 'Life',
+  },
+  {
+    id: 'v-life-5',
+    arabic: 'هُوَ الَّذِي جَعَلَ لَكُمُ اللَّيْلَ لِتَسْكُنُوا فِيهِ وَالنَّهَارَ مُبْصِرًا',
+    english: 'It is He who made for you the night to rest therein and the day, giving sight.',
+    bangla: 'তিনিই তোমাদের জন্য রাত করেছেন যাতে তোমরা তাতে বিশ্রাম করো এবং দিন করেছেন দর্শনশীল।',
+    reference: 'Yunus 10:67',
+    referenceAr: 'يونس ١٠:٦٧',
+    theme: 'Life',
+  },
+  {
+    id: 'v-reflection-1',
+    arabic: 'أَفَلَا يَنظُرُونَ إِلَى الْإِبِلِ كَيْفَ خُلِقَتْ',
+    english: 'Then do they not look at the camels — how they are created?',
+    bangla: 'তারা কি উটের দিকে লক্ষ্য করে না — কীভাবে সৃষ্টি হয়েছে?',
+    reference: 'Al-Ghashiyah 88:17',
+    referenceAr: 'الغاشية ٨٨:١٧',
+    theme: 'Reflection',
+  },
+  {
+    id: 'v-reflection-2',
+    arabic: 'إِنَّ فِي خَلْقِ السَّمَاوَاتِ وَالْأَرْضِ وَاخْتِلَافِ اللَّيْلِ وَالنَّهَارِ لَآيَاتٍ لِّأُولِي الْأَلْبَابِ',
+    english: 'Indeed, in the creation of the heavens and the earth and the alternation of the night and the day are signs for those of understanding.',
+    bangla: 'নিশ্চয়ই আসমান ও যমীনের সৃষ্টিতে এবং রাত ও দিনের পরিবর্তনে বোধশক্তিসম্পন্নদের জন্য নিদর্শন রয়েছে।',
+    reference: 'Aal-E-Imran 3:190',
+    referenceAr: 'آل عمران ٣:١٩٠',
+    theme: 'Reflection',
+  },
+  {
+    id: 'v-dua-1',
+    arabic: 'رَّبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ',
+    english: 'Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.',
+    bangla: 'হে আমাদের রব! আমাদের দুনিয়াতে কল্যাণ দান করো এবং আখিরাতেও কল্যাণ দান করো, আর আমাদের জাহান্নামের শাস্তি থেকে রক্ষা করো।',
+    reference: 'Al-Baqarah 2:201',
+    referenceAr: 'البقرة ٢:٢٠١',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-2',
+    arabic: 'رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً',
+    english: 'Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy.',
+    bangla: 'হে আমাদের রব! তুমি আমাদের হিদায়েত দেওয়ার পর আমাদের অন্তরসমূহ বক্র করো না এবং তোমার পক্ষ থেকে আমাদের রহমত দান করো।',
+    reference: 'Aal-E-Imran 3:8',
+    referenceAr: 'آل عمران ٣:٨',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-3',
+    arabic: 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
+    english: 'My Lord, expand for me my breast and ease for me my task.',
+    bangla: 'হে আমার রব! আমার বক্ষ প্রশস্ত করো এবং আমার কাজ সহজ করো।',
+    reference: 'Ta-Ha 20:25-26',
+    referenceAr: 'طه ٢٠:٢٥-٢٦',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-4',
+    arabic: 'رَبِّ زِدْنِي عِلْمًا',
+    english: 'My Lord, increase me in knowledge.',
+    bangla: 'হে আমার রব! আমার জ্ঞান বৃদ্ধি করো।',
+    reference: 'Ta-Ha 20:114',
+    referenceAr: 'طه ٢٠:١١٤',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-5',
+    arabic: 'رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا',
+    english: 'Our Lord, forgive us our sins and the excess [committed] in our affairs.',
+    bangla: 'হে আমাদের রব! আমাদের গুনাহ এবং আমাদের কাজে সীমালঙ্ঘন ক্ষমা করো।',
+    reference: 'Aal-E-Imran 3:147',
+    referenceAr: 'آل عمران ٣:١٤٧',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-6',
+    arabic: 'رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ',
+    english: 'Our Lord, grant us from among our wives and offspring comfort to our eyes.',
+    bangla: 'হে আমাদের রব! আমাদের স্ত্রী ও সন্তানদের মধ্য থেকে আমাদের চোখের শীতলতা দান করো।',
+    reference: 'Al-Furqan 25:74',
+    referenceAr: 'الفرقان ٢٥:٧٤',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-7',
+    arabic: 'رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي',
+    english: 'My Lord, make me an establisher of prayer, and [many] from my descendants.',
+    bangla: 'হে আমার রব! আমাকে সালাত কায়েমকারী করো এবং আমার সন্তানদের মধ্য থেকেও।',
+    reference: 'Ibrahim 14:40',
+    referenceAr: 'إبراهيم ١٤:٤٠',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-8',
+    arabic: 'رَبَّنَا تَقَبَّلْ مِنَّا ۖ إِنَّكَ أَنتَ السَّمِيعُ الْعَلِيمُ',
+    english: 'Our Lord, accept it from us. Indeed You are the Hearing, the Knowing.',
+    bangla: 'হে আমাদের রব! আমাদের পক্ষ থেকে তা গ্রহণ করো। নিশ্চয়ই তুমি সর্বশ্রোতা, সর্বজ্ঞ।',
+    reference: 'Al-Baqarah 2:127',
+    referenceAr: 'البقرة ٢:١٢٧',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-9',
+    arabic: 'لَّا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ',
+    english: 'There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.',
+    bangla: 'তুমি ছাড়া কোনো ইলাহ নেই। তুমি পবিত্র। নিশ্চয়ই আমি জালেমদের অন্তর্ভুক্ত ছিলাম।',
+    reference: 'Al-Anbiya 21:87',
+    referenceAr: 'الأنبياء ٢١:٨٧',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-dua-10',
+    arabic: 'حَسْبِيَ اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ ۖ عَلَيْهِ تَوَكَّلْتُ ۖ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ',
+    english: 'Sufficient for me is Allah; there is no deity except Him. On Him I have relied, and He is the Lord of the Great Throne.',
+    bangla: 'আমার জন্য আল্লাহই যথেষ্ট। তিনি ছাড়া কোনো ইলাহ নেই। আমি তাঁর ওপরই ভরসা করেছি। তিনি মহান আরশের রব।',
+    reference: 'At-Tawbah 9:129',
+    referenceAr: 'التوبة ٩:١٢٩',
+    theme: 'Dua',
+  },
+  {
+    id: 'v-light-1',
+    arabic: 'اللَّهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ',
+    english: 'Allah is the Light of the heavens and the earth.',
+    bangla: 'আল্লাহ আসমানসমূহ ও পৃথিবীর জ্যোতি।',
+    reference: 'An-Nur 24:35',
+    referenceAr: 'النور ٢٤:٣٥',
+    theme: 'Light',
+  },
+  {
+    id: 'v-light-2',
+    arabic: 'يَهْدِي اللَّهُ لِنُورِهِ مَن يَشَاءُ',
+    english: 'Allah guides to His light whom He wills.',
+    bangla: 'আল্লাহ তাঁর নূরের দিকে যাকে ইচ্ছা হিদায়েত করেন।',
+    reference: 'An-Nur 24:35',
+    referenceAr: 'النور ٢٤:٣٥',
+    theme: 'Light',
+  },
+  {
+    id: 'v-light-3',
+    arabic: 'وَأَنزَلْنَا إِلَيْكُمْ نُورًا مُّبِينًا',
+    english: 'And We have sent down to you a clear light.',
+    bangla: 'আর আমরা তোমাদের প্রতি এক সুস্পষ্ট নূর নাজিল করেছি।',
+    reference: 'An-Nisa 4:174',
+    referenceAr: 'النساء ٤:١٧٤',
+    theme: 'Light',
+  },
+  {
+    id: 'v-light-4',
+    arabic: 'يَوْمَ تَرَى الْمُؤْمِنِينَ وَالْمُؤْمِنَاتِ يَسْعَىٰ نُورُهُم بَيْنَ أَيْدِيهِمْ',
+    english: 'The Day you see the believing men and believing women, their light proceeding before them.',
+    bangla: 'যেদিন তুমি দেখবে মুমিন পুরুষ ও মুমিন নারীদের নূর তাদের সামনে দ্রুত অগ্রসর হচ্ছে।',
+    reference: 'Al-Hadid 57:12',
+    referenceAr: 'الحديد ٥٧:١٢',
+    theme: 'Light',
+  },
+  {
+    id: 'v-light-5',
+    arabic: 'الرَّبُّ الْعَالَمِينَ',
+    english: 'Lord of the worlds.',
+    bangla: 'বিশ্বজগতের রব।',
+    reference: 'Al-Fatihah 1:2',
+    referenceAr: 'الفاتحة ١:٢',
+    theme: 'Light',
+  },
+  {
+    id: 'v-purity-1',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',
+    english: 'Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.',
+    bangla: 'নিশ্চয়ই আল্লাহ তওবাকারীদের ভালোবাসেন এবং পবিত্রতা অর্জনকারীদের ভালোবাসেন।',
+    reference: 'Al-Baqarah 2:222',
+    referenceAr: 'البقرة ٢:٢٢٢',
+    theme: 'Purity',
+  },
+  {
+    id: 'v-purity-2',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ الْمُتَّقِينَ',
+    english: 'Indeed, Allah loves the righteous.',
+    bangla: 'নিশ্চয়ই আল্লাহ মুত্তাকীদের ভালোবাসেন।',
+    reference: 'At-Tawbah 9:7',
+    referenceAr: 'التوبة ٩:٧',
+    theme: 'Purity',
+  },
+  {
+    id: 'v-purity-3',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ الْمُحْسِنِينَ',
+    english: 'Indeed, Allah loves the doers of good.',
+    bangla: 'নিশ্চয়ই আল্লাহ ইহসানকারীদের ভালোবাসেন।',
+    reference: 'Al-Baqarah 2:195',
+    referenceAr: 'البقرة ٢:١٩٥',
+    theme: 'Purity',
+  },
+  {
+    id: 'v-purity-4',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ الْمُتَوَكِّلِينَ',
+    english: 'Indeed, Allah loves those who rely [upon Him].',
+    bangla: 'নিশ্চয়ই আল্লাহ ভরসাকারীদের ভালোবাসেন।',
+    reference: 'Aal-E-Imran 3:159',
+    referenceAr: 'آل عمران ٣:١٥٩',
+    theme: 'Purity',
+  },
+  {
+    id: 'v-purity-5',
+    arabic: 'إِنَّ اللَّهَ يُحِبُّ الصَّابِرِينَ',
+    english: 'Indeed, Allah loves the patient.',
+    bangla: 'নিশ্চয়ই আল্লাহ ধৈর্যশীলদের ভালোবাসেন।',
+    reference: 'Aal-E-Imran 3:146',
+    referenceAr: 'آل عمران ٣:١٤٦',
+    theme: 'Purity',
+  },
+  {
+    id: 'v-justice-1',
+    arabic: 'إِنَّ اللَّهَ يَأْمُرُ بِالْعَدْلِ وَالْإِحْسَانِ',
+    english: 'Indeed, Allah orders justice and good conduct.',
+    bangla: 'নিশ্চয়ই আল্লাহ ন্যায়বিচার ও ইহসানের নির্দেশ দেন।',
+    reference: 'An-Nahl 16:90',
+    referenceAr: 'النحل ١٦:٩٠',
+    theme: 'Justice',
+  },
+  {
+    id: 'v-justice-2',
+    arabic: 'وَلَا يَجْرِمَنَّكُمْ شَنَآنُ قَوْمٍ عَلَىٰ أَلَّا تَعْدِلُوا ۚ اعْدِلُوا هُوَ أَقْرَبُ لِلتَّقْوَىٰ',
+    english: 'And let not the hatred of a people prevent you from being just. Be just; that is nearer to righteousness.',
+    bangla: 'কোনো সম্প্রদায়ের শত্রুতা যেন তোমাদের ন্যায়বিচার থেকে বিরত রাখতে না পারে। তোমরা ন্যায়বিচার করো, তা তাকওয়ার নিকটতর।',
+    reference: 'Al-Ma’idah 5:8',
+    referenceAr: 'المائدة ٥:٨',
+    theme: 'Justice',
+  },
+  {
+    id: 'v-justice-3',
+    arabic: 'وَإِذَا حَكَمْتُم بَيْنَ النَّاسِ أَن تَحْكُمُوا بِالْعَدْلِ',
+    english: '[And] when you judge between people, judge with justice.',
+    bangla: 'আর তোমরা মানুষের মধ্যে বিচার করলে ন্যায্যবিচার করো।',
+    reference: 'An-Nisa 4:58',
+    referenceAr: 'النساء ٤:٥٨',
+    theme: 'Justice',
+  },
+  {
+    id: 'v-justice-4',
+    arabic: 'وَأَقْسِطُوا ۚ إِنَّ اللَّهَ يُحِبُّ الْمُقْسِطِينَ',
+    english: 'And act justly. Indeed, Allah loves those who act justly.',
+    bangla: 'আর তোমরা ইনসাফ করো। নিশ্চয়ই আল্লাহ ইনসাফকারীদের ভালোবাসেন।',
+    reference: 'Al-Hujurat 49:9',
+    referenceAr: 'الحجرات ٤٩:٩',
+    theme: 'Justice',
+  },
+  {
+    id: 'v-justice-5',
+    arabic: 'يَا أَيُّهَا الَّذِينَ آمَنُوا كُونُوا قَوَّامِينَ بِالْقِسْطِ شُهَدَاءَ لِلَّهِ',
+    english: 'O you who have believed, be persistently standing firm in justice, witnesses for Allah.',
+    bangla: 'হে মুমিনগণ! তোমরা আল্লাহর জন্য ন্যায়ের ওপর অটল থাকো, সাক্ষী হও।',
+    reference: 'An-Nisa 4:135',
+    referenceAr: 'النساء ٤:١٣٥',
+    theme: 'Justice',
+  },
+  {
+    id: 'v-community-1',
+    arabic: 'إِنَّمَا الْمُؤْمِنُونَ إِخْوَةٌ',
+    english: 'The believers are but brothers.',
+    bangla: 'নিশ্চয়ই মুমিনরা তো পরস্পর ভাই।',
+    reference: 'Al-Hujurat 49:10',
+    referenceAr: 'الحجرات ٤٩:١٠',
+    theme: 'Community',
+  },
+  {
+    id: 'v-community-2',
+    arabic: 'وَتَعَاوَنُوا عَلَى الْبِرِّ وَالتَّقْوَىٰ ۖ وَلَا تَعَاوَنُوا عَلَى الْإِثْمِ وَالْعُدْوَانِ',
+    english: 'And cooperate in righteousness and piety, but do not cooperate in sin and aggression.',
+    bangla: 'আর তোমরা পুণ্য ও তাকওয়ার বিষয়ে পরস্পরে সহযোগিতা করো, কিন্তু পাপ ও সীমালঙ্ঘনে সহযোগিতা করো না।',
+    reference: 'Al-Ma’idah 5:2',
+    referenceAr: 'المائدة ٥:٢',
+    theme: 'Community',
+  },
+  {
+    id: 'v-community-3',
+    arabic: 'وَالْعَصْرِ ۝ إِنَّ الْإِنسَانَ لَفِي خُسْرٍ ۝ إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ',
+    english: 'By time. Indeed, mankind is in loss. Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience.',
+    bangla: 'শপথ কালের। নিশ্চয়ই মানুষ ক্ষতিগ্রস্ত। তবে তারা ছাড়া যারা ঈমান এনেছে, সৎকাজ করেছে, এবং পরস্পরকে সত্য ও ধৈর্যের উপদেশ দিয়েছে।',
+    reference: 'Al-Asr 103:1-3',
+    referenceAr: 'العصر ١٠٣:١-٣',
+    theme: 'Community',
+  },
+  {
+    id: 'v-community-4',
+    arabic: 'وَأَمْرُهُمْ شُورَىٰ بَيْنَهُمْ',
+    english: 'And their affair is [determined by] consultation among them.',
+    bangla: 'আর তাদের কাজ পরামর্শের ভিত্তিতে পরিচালিত হয়।',
+    reference: 'Ash-Shura 42:38',
+    referenceAr: 'الشورى ٤٢:٣٨',
+    theme: 'Community',
+  },
+  {
+    id: 'v-community-5',
+    arabic: 'إِنَّ أَكْرَمَكُمْ عِندَ اللَّهِ أَتْقَاكُمْ',
+    english: 'Indeed, the most noble of you in the sight of Allah is the most righteous of you.',
+    bangla: 'নিশ্চয়ই তোমাদের মধ্যে আল্লাহর কাছে সবচেয়ে সম্মানিত সেই যে সবচেয়ে বেশি তাকওয়া অবলম্বন করে।',
+    reference: 'Al-Hujurat 49:13',
+    referenceAr: 'الحجرات ٤٩:١٣',
+    theme: 'Community',
+  },
+  {
+    id: 'v-creation-1',
+    arabic: 'إِنَّ فِي خَلْقِ السَّمَاوَاتِ وَالْأَرْضِ وَاخْتِلَافِ اللَّيْلِ وَالنَّهَارِ لَآيَاتٍ لِّأُولِي الْأَلْبَابِ',
+    english: 'Indeed, in the creation of the heavens and the earth and the alternation of the night and the day are signs for those of understanding.',
+    bangla: 'নিশ্চয়ই আসমান ও যমীনের সৃষ্টিতে এবং রাত ও দিনের পরিবর্তনে বোধশক্তিসম্পন্নদের জন্য নিদর্শন রয়েছে।',
+    reference: 'Aal-E-Imran 3:190',
+    referenceAr: 'آل عمران ٣:١٩٠',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-2',
+    arabic: 'وَفِي الْأَرْضِ آيَاتٌ لِّلْمُوقِنِينَ ۝ وَفِي أَنفُسِكُمْ ۚ أَفَلَا تُبْصِرُونَ',
+    english: 'And on the earth are signs for the certain [in faith]. And in yourselves. Then will you not see?',
+    bangla: 'পৃথিবীতে নিশ্চিত বিশ্বাসীদের জন্য নিদর্শন রয়েছে এবং তোমাদের নিজেদের মধ্যেও। তবুও কি তোমরা দেখবে না?',
+    reference: 'Ad-Dhariyat 51:20-21',
+    referenceAr: 'الذاريات ٥١:٢٠-٢١',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-3',
+    arabic: 'وَالشَّمْسُ تَجْرِي لِمُسْتَقَرٍّ لَّهَا',
+    english: 'And the sun runs [on course] toward its stopping point.',
+    bangla: 'আর সূর্য তার নির্ধারিত স্থানের দিকে চলে।',
+    reference: 'Ya-Sin 36:38',
+    referenceAr: 'يس ٣٦:٣٨',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-4',
+    arabic: 'وَالْقَمَرَ قَدَّرْنَاهُ مَنَازِلَ حَتَّىٰ عَادَ كَالْعُرْجُونِ الْقَدِيمِ',
+    english: 'And the moon — We have determined for it phases, until it returns like a dried date stalk.',
+    bangla: 'আর চাঁদের জন্য আমরা মনযিল নির্ধারণ করেছি, যতক্ষণ না তা শুকনো খজুরের ডালের মতো ফিরে আসে।',
+    reference: 'Ya-Sin 36:39',
+    referenceAr: 'يس ٣٦:٣٩',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-5',
+    arabic: 'لَا الشَّمْسُ يَنبَغِي لَهَا أَن تُدْرِكَ الْقَمَرَ وَلَا اللَّيْلُ سَابِقُ النَّهَارِ',
+    english: 'It is not allowable for the sun to reach the moon, nor does the night overtake the day.',
+    bangla: 'সূর্যের পক্ষে সম্ভব নয় চাঁদকে পৌঁছানো, আর রাত দিনের পূর্বে আসতে পারে না।',
+    reference: 'Ya-Sin 36:40',
+    referenceAr: 'يس ٣٦:٤٠',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-6',
+    arabic: 'وَمِنْ آيَاتِهِ خَلْقُ السَّمَاوَاتِ وَالْأَرْضِ وَاخْتِلَافُ أَلْسِنَتِكُمْ وَأَلْوَانِكُمْ',
+    english: 'And of His signs is the creation of the heavens and the earth and the diversity of your languages and your colors.',
+    bangla: 'তাঁর নিদর্শনসমূহের মধ্যে রয়েছে আসমান ও যমীনের সৃষ্টি এবং তোমাদের ভাষা ও বর্ণের বৈচিত্র্য।',
+    reference: 'Ar-Rum 30:22',
+    referenceAr: 'الروم ٣٠:٢٢',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-7',
+    arabic: 'وَمِنْ آيَاتِهِ أَنَّكَ تَرَى الْأَرْضَ خَاشِعَةً فَإِذَا أَنزَلْنَا عَلَيْهَا الْمَاءَ اهْتَزَّتْ وَرَبَتْ',
+    english: 'And of His signs is that you see the earth stilled, but when We send down upon it rain, it quivers and grows.',
+    bangla: 'তাঁর নিদর্শনসমূহের মধ্যে রয়েছে যে তুমি যমীনকে শূন্য দেখতে পাও, কিন্তু আমরা যখন তাতে বৃষ্টি নাজিল করি তখন তা নড়ে ওঠে ও স্ফীত হয়।',
+    reference: 'Fussilat 41:39',
+    referenceAr: 'فصلت ٤١:٣٩',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-8',
+    arabic: 'وَالسَّمَاءَ بَنَيْنَاهَا بِأَيْدٍ وَإِنَّا لَمُوسِعُونَ',
+    english: 'And the heaven We constructed with strength, and indeed, We are [its] expander.',
+    bangla: 'আর আসমান আমরা নির্মাণ করেছি শক্তির সাথে, এবং নিশ্চয়ই আমরাই এর প্রসারকারী।',
+    reference: 'Ad-Dhariyat 51:47',
+    referenceAr: 'الذاريات ٥١:٤٧',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-9',
+    arabic: 'وَالْأَرْضَ فَرَشْنَاهَا فَنِعْمَ الْمَاهِدُونَ',
+    english: 'And the earth We have spread out, and excellent is the preparer.',
+    bangla: 'আর যমীন আমরা বিছিয়ে দিয়েছি, কতই না উত্তম বিছানা প্রস্তুতকারী।',
+    reference: 'Ad-Dhariyat 51:48',
+    referenceAr: 'الذاريات ٥١:٤٨',
+    theme: 'Creation',
+  },
+  {
+    id: 'v-creation-10',
+    arabic: 'وَمِن كُلِّ شَيْءٍ خَلَقْنَا زَوْجَيْنِ لَعَلَّكُمْ تَذَكَّرُونَ',
+    english: 'And of all things We created two mates [pairs]; perhaps you will remember.',
+    bangla: 'আর সব কিছু থেকে আমরা জোড়া সৃষ্টি করেছি, যাতে তোমরা উপদেশ গ্রহণ করো।',
+    reference: 'Ad-Dhariyat 51:49',
+    referenceAr: 'الذاريات ٥١:٤٩',
+    theme: 'Creation',
+  },
+];
+
 // ─── Prayer Time Calculation ───────────────────────────
 
-function calculatePrayerTimes(lat: number, lng: number, date: Date): Record<string, string> {
+// Calculation methods supported by the `adhan` library.
+type CalcMethodId =
+  | 'MWL' | 'Egyptian' | 'Karachi' | 'UmmAlQura' | 'Dubai' | 'Qatar'
+  | 'Kuwait' | 'MoonsightingCommittee' | 'Singapore' | 'Turkey'
+  | 'Tehran' | 'NorthAmerica';
+
+const CALC_METHODS: { id: CalcMethodId; label: string; region: string }[] = [
+  { id: 'MWL', label: 'Muslim World League', region: 'Europe, Far East, NA' },
+  { id: 'Egyptian', label: 'Egyptian Authority', region: 'Africa, Syria, Lebanon' },
+  { id: 'Karachi', label: 'Univ. of Karachi', region: 'Pakistan, India, Bangladesh' },
+  { id: 'UmmAlQura', label: 'Umm al-Qura (Makkah)', region: 'Saudi Arabia' },
+  { id: 'Dubai', label: 'Dubai (UAE)', region: 'UAE' },
+  { id: 'Qatar', label: 'Qatar', region: 'Qatar' },
+  { id: 'Kuwait', label: 'Kuwait', region: 'Kuwait' },
+  { id: 'Singapore', label: 'Singapore', region: 'Singapore, SE Asia' },
+  { id: 'Turkey', label: 'Turkey (Diyanet)', region: 'Turkey' },
+  { id: 'MoonsightingCommittee', label: 'Moonsighting Committee', region: 'Worldwide' },
+  { id: 'NorthAmerica', label: 'ISNA (North America)', region: 'USA, Canada' },
+  { id: 'Tehran', label: 'Tehran (Jafari)', region: 'Iran, Shia' },
+];
+
+const MADHABS: { id: 'Shafi' | 'Hanafi'; label: string }[] = [
+  { id: 'Shafi', label: 'Shafi\'i / Maliki / Hanbali' },
+  { id: 'Hanafi', label: 'Hanafi' },
+];
+
+function getCalcParams(methodId: CalcMethodId) {
+  switch (methodId) {
+    case 'Egyptian': return AdhanCalculationMethod.Egyptian();
+    case 'Karachi': return AdhanCalculationMethod.Karachi();
+    case 'UmmAlQura': return AdhanCalculationMethod.UmmAlQura();
+    case 'Dubai': return AdhanCalculationMethod.Dubai();
+    case 'Qatar': return AdhanCalculationMethod.Qatar();
+    case 'Kuwait': return AdhanCalculationMethod.Kuwait();
+    case 'Singapore': return AdhanCalculationMethod.Singapore();
+    case 'Turkey': return AdhanCalculationMethod.Turkey();
+    case 'MoonsightingCommittee': return AdhanCalculationMethod.MoonsightingCommittee();
+    case 'NorthAmerica': return AdhanCalculationMethod.NorthAmerica();
+    case 'Tehran': return AdhanCalculationMethod.Tehran();
+    case 'MWL':
+    default: return AdhanCalculationMethod.MuslimWorldLeague();
+  }
+}
+
+interface PrayerCalcConfig {
+  method: CalcMethodId;
+  madhab: 'Shafi' | 'Hanafi';
+  adjustments?: { fajr?: number; dhuhr?: number; asr?: number; maghrib?: number; isha?: number };
+}
+
+const DEFAULT_CALC_CONFIG: PrayerCalcConfig = {
+  method: 'MWL',
+  madhab: 'Shafi',
+  adjustments: { dhuhr: 0, maghrib: 0 },
+};
+
+function calculatePrayerTimes(
+  lat: number,
+  lng: number,
+  date: Date,
+  config: PrayerCalcConfig = DEFAULT_CALC_CONFIG,
+): Record<string, string> {
   try {
     const coords = new AdhanCoordinates(lat, lng);
-    const params = AdhanCalculationMethod.MuslimWorldLeague();
-    params.madhab = AdhanMadhab.Shafi;
+    const params = getCalcParams(config.method);
+    params.madhab = config.madhab === 'Hanafi' ? AdhanMadhab.Hanafi : AdhanMadhab.Shafi;
+    if (config.adjustments) {
+      const a = config.adjustments;
+      try {
+        const paramsAny = params as any;
+        if (typeof paramsAny.adjustments === 'object') {
+          paramsAny.adjustments = {
+            ...(paramsAny.adjustments || {}),
+            fajr: a.fajr ?? 0,
+            sunrise: 0,
+            dhuhr: a.dhuhr ?? 0,
+            asr: a.asr ?? 0,
+            maghrib: a.maghrib ?? 0,
+            isha: a.isha ?? 0,
+          };
+        }
+      } catch { /* ignore adjustments failure */ }
+    }
     const pt = new AdhanPrayerTimes(coords, date, params);
 
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -830,6 +2619,19 @@ function calculatePrayerTimes(lat: number, lng: number, date: Date): Record<stri
   } catch {
     return { Fajr: '--:--', Sunrise: '--:--', Dhuhr: '--:--', Asr: '--:--', Maghrib: '--:--', Isha: '--:--' };
   }
+}
+
+// Parse a "H:MM AM/PM" string into a Date object for the current day.
+function parsePrayerTimeToDate(timeStr: string, baseDate: Date = new Date()): Date | null {
+  const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
+  if (!parts) return null;
+  let h = parseInt(parts[1]);
+  const m = parseInt(parts[2]);
+  if (parts[3] === 'PM' && h !== 12) h += 12;
+  if (parts[3] === 'AM' && h === 12) h = 0;
+  const d = new Date(baseDate);
+  d.setHours(h, m, 0, 0);
+  return d;
 }
 
 function getNextPrayer(prayerTimes: Record<string, string>): string | null {
@@ -1074,7 +2876,8 @@ export default function Home() {
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
-      const dismissed = localStorage.getItem('wird-install-dismissed');
+      let dismissed: string | null = null;
+      try { dismissed = localStorage.getItem('wird-install-dismissed'); } catch { /* ignore */ }
       if (dismissed !== 'true') {
         setTimeout(() => setShowInstallBanner(true), 3000);
       }
@@ -1109,6 +2912,684 @@ export default function Home() {
     setActiveTab('listen');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+
+  // ── Lifted Prayer/Adhan/Notif State (moved here from DailyMotivation) ──
+  const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem('wird-location');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+  const [locationName, setLocationName] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem('wird-location-name');
+    } catch { return null; }
+  });
+  const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // ── Prayer Calculation Config ──
+  const [calcConfig, setCalcConfig] = useState<PrayerCalcConfig>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('wird-calc-config');
+        if (saved) return { ...DEFAULT_CALC_CONFIG, ...JSON.parse(saved) };
+      } catch { /* ignore */ }
+    }
+    return DEFAULT_CALC_CONFIG;
+  });
+  const changeCalcConfig = useCallback((next: Partial<PrayerCalcConfig>) => {
+    setCalcConfig((prev) => {
+      const merged = { ...prev, ...next };
+      try { localStorage.setItem('wird-calc-config', JSON.stringify(merged)); } catch { /* ignore */ }
+      if (location) {
+        setPrayerTimes(calculatePrayerTimes(location.lat, location.lng, new Date(), merged));
+      }
+      return merged;
+    });
+  }, [location]);
+
+  // ── Prayer Notification State ──
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'default'>('default');
+  const [notifAdvance, setNotifAdvance] = useState(15);
+  const [lastNotifiedPrayer, setLastNotifiedPrayer] = useState<string | null>(null);
+  const notifIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('wird-notif-enabled');
+      if (saved === 'true') setNotifEnabled(true);
+      const savedAdv = localStorage.getItem('wird-notif-advance');
+      if (savedAdv) setNotifAdvance(parseInt(savedAdv) || 15);
+      const savedLast = localStorage.getItem('wird-notif-last');
+      if (savedLast) setLastNotifiedPrayer(savedLast);
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotifPermission = useCallback(async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    try {
+      const perm = await Notification.requestPermission();
+      setNotifPermission(perm);
+      if (perm === 'granted') {
+        setNotifEnabled(true);
+        try { localStorage.setItem('wird-notif-enabled', 'true'); } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleNotifEnabled = useCallback(() => {
+    if (notifPermission !== 'granted') {
+      requestNotifPermission();
+      return;
+    }
+    const next = !notifEnabled;
+    setNotifEnabled(next);
+    try { localStorage.setItem('wird-notif-enabled', String(next)); } catch { /* ignore */ }
+    if (!next) {
+      setLastNotifiedPrayer(null);
+      try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
+    }
+  }, [notifEnabled, notifPermission, requestNotifPermission]);
+
+  const changeNotifAdvance = useCallback((mins: number) => {
+    setNotifAdvance(mins);
+    try { localStorage.setItem('wird-notif-advance', String(mins)); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!notifEnabled || notifPermission !== 'granted') {
+      if (notifIntervalRef.current) {
+        clearInterval(notifIntervalRef.current);
+        notifIntervalRef.current = null;
+      }
+      return;
+    }
+    const checkAndNotify = () => {
+      if (!prayerTimes) return;
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const order = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      for (const name of order) {
+        const timeStr = prayerTimes[name];
+        if (!timeStr || timeStr === '--:--') continue;
+        const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
+        if (!parts) continue;
+        let h = parseInt(parts[1]);
+        const m = parseInt(parts[2]);
+        if (parts[3] === 'PM' && h !== 12) h += 12;
+        if (parts[3] === 'AM' && h === 12) h = 0;
+        const prayerMinutes = h * 60 + m;
+        const diff = prayerMinutes - currentMinutes;
+        if (diff > 0 && diff <= notifAdvance && lastNotifiedPrayer !== name) {
+          const notif = new Notification(`🕌 ${name} Prayer in ${diff} min`, {
+            body: `Prepare for ${name} prayer at ${timeStr}. May Allah accept your prayers.`,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: `wird-${name}-${now.toDateString()}`,
+            requireInteraction: false,
+            silent: false,
+            data: { url: '/' },
+          });
+          notif.onclick = () => { notif.close(); window.focus(); };
+          setLastNotifiedPrayer(name);
+          try { localStorage.setItem('wird-notif-last', name); } catch { /* ignore */ }
+          break;
+        }
+        if (diff <= 0 && lastNotifiedPrayer === name) {
+          setLastNotifiedPrayer(null);
+          try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
+        }
+      }
+    };
+    checkAndNotify();
+    notifIntervalRef.current = setInterval(checkAndNotify, 30000);
+    return () => {
+      if (notifIntervalRef.current) clearInterval(notifIntervalRef.current);
+    };
+  }, [notifEnabled, notifPermission, prayerTimes, notifAdvance, lastNotifiedPrayer]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (location) {
+      setPrayerTimes(calculatePrayerTimes(location.lat, location.lng, new Date(), calcConfig));
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setLocation(loc);
+          setLocationDenied(false);
+          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
+          (async () => {
+            try {
+              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10&accept-language=en`);
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
+                setLocationName(name);
+                try { localStorage.setItem('wird-location-name', name); } catch {}
+              }
+            } catch {}
+          })();
+        },
+        () => {
+          const mecca = { lat: 21.4225, lng: 39.8262 };
+          setLocation(mecca);
+          setLocationDenied(true);
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      setLocation({ lat: 21.4225, lng: 39.8262 });
+      setLocationDenied(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, calcConfig.method, calcConfig.madhab]);
+
+  const refreshLocation = useCallback(() => {
+    try { localStorage.removeItem('wird-location'); } catch {}
+    try { localStorage.removeItem('wird-location-name'); } catch {}
+    setLocation(null);
+    setLocationName(null);
+    setPrayerTimes(null);
+    setLocationDenied(false);
+  }, []);
+
+  // ── Adhan Alarm State ──
+  const [adhanEnabled, setAdhanEnabled] = useState(false);
+  const [adhanVolume, setAdhanVolume] = useState(0.8);
+  const [adhanEnabledPrayers, setAdhanEnabledPrayers] = useState<Record<string, boolean>>({
+    Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true,
+  });
+  const [adhanPlayDua, setAdhanPlayDua] = useState(true);
+  const [adhanPlaybackSpeed, setAdhanPlaybackSpeed] = useState(1);
+  const [activeAdhan, setActiveAdhan] = useState<{ prayerName: string; isFajr: boolean } | null>(null);
+  const adhanAudioRef = useRef<HTMLAudioElement | null>(null);
+  const duaAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wakeLockRef = useRef<any>(null);
+  const lastAdhanPlayedKeyRef = useRef<string | null>(null);
+  const adhanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    try {
+      const e = localStorage.getItem('wird-adhan-enabled');
+      if (e === 'true') setAdhanEnabled(true);
+      const v = localStorage.getItem('wird-adhan-volume');
+      if (v) setAdhanVolume(Math.max(0, Math.min(1, parseFloat(v))));
+      const p = localStorage.getItem('wird-adhan-prayers');
+      if (p) { try { setAdhanEnabledPrayers(JSON.parse(p)); } catch { /* ignore */ } }
+      const d = localStorage.getItem('wird-adhan-play-dua');
+      if (d !== null) setAdhanPlayDua(d === 'true');
+      const s = localStorage.getItem('wird-adhan-speed');
+      if (s) setAdhanPlaybackSpeed(parseFloat(s) || 1);
+      const lastKey = localStorage.getItem('wird-adhan-last');
+      if (lastKey) lastAdhanPlayedKeyRef.current = lastKey;
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { try { localStorage.setItem('wird-adhan-enabled', String(adhanEnabled)); } catch {} }, [adhanEnabled]);
+  useEffect(() => { try { localStorage.setItem('wird-adhan-volume', String(adhanVolume)); } catch {} }, [adhanVolume]);
+  useEffect(() => { try { localStorage.setItem('wird-adhan-prayers', JSON.stringify(adhanEnabledPrayers)); } catch {} }, [adhanEnabledPrayers]);
+  useEffect(() => { try { localStorage.setItem('wird-adhan-play-dua', String(adhanPlayDua)); } catch {} }, [adhanPlayDua]);
+  useEffect(() => { try { localStorage.setItem('wird-adhan-speed', String(adhanPlaybackSpeed)); } catch {} }, [adhanPlaybackSpeed]);
+
+  useEffect(() => {
+    if (!activeAdhan) {
+      if (wakeLockRef.current) { try { wakeLockRef.current.release(); } catch {} wakeLockRef.current = null; }
+      return;
+    }
+    const acquire = async () => {
+      try { if ('wakeLock' in navigator) { wakeLockRef.current = await (navigator as any).wakeLock.request('screen'); } } catch {}
+    };
+    acquire();
+  }, [activeAdhan]);
+
+  const stopAdhan = useCallback(() => {
+    if (adhanAudioRef.current) { try { adhanAudioRef.current.pause(); adhanAudioRef.current.currentTime = 0; } catch {} }
+    if (duaAudioRef.current) { try { duaAudioRef.current.pause(); duaAudioRef.current.currentTime = 0; } catch {} }
+    setActiveAdhan(null);
+    if ('mediaSession' in navigator) {
+      try { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } catch {}
+    }
+  }, []);
+
+  const playAdhan = useCallback(async (prayerName: string) => {
+    const isFajr = prayerName === 'Fajr';
+    const src = isFajr ? '/audio/adhan-fajr.mp3' : '/audio/adhan.mp3';
+    if (adhanAudioRef.current) { try { adhanAudioRef.current.pause(); } catch {} }
+    if (duaAudioRef.current) { try { duaAudioRef.current.pause(); } catch {} }
+    const audio = new Audio(src);
+    audio.volume = adhanVolume;
+    audio.playbackRate = adhanPlaybackSpeed;
+    audio.preload = 'auto';
+    adhanAudioRef.current = audio;
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.metadata = new (window as any).MediaMetadata({
+          title: `${prayerName} Adhan`,
+          artist: isFajr ? 'Mishary Rashid al-Afasy' : 'Nasser al-Qatami',
+          album: 'Wird Prayer Time',
+          artwork: [
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          ],
+        });
+        navigator.mediaSession.setActionHandler('play', () => audio.play());
+        navigator.mediaSession.setActionHandler('pause', stopAdhan);
+        navigator.mediaSession.setActionHandler('stop', stopAdhan);
+      } catch {}
+    }
+    audio.onended = () => {
+      if (adhanPlayDua) {
+        const dua = new Audio('/audio/dua-after-adhan.mp3');
+        dua.volume = adhanVolume;
+        dua.playbackRate = adhanPlaybackSpeed;
+        dua.preload = 'auto';
+        duaAudioRef.current = dua;
+        dua.onended = () => stopAdhan();
+        dua.onerror = () => stopAdhan();
+        dua.play().catch(() => stopAdhan());
+      } else { stopAdhan(); }
+    };
+    audio.onerror = () => stopAdhan();
+    try { await audio.play(); setActiveAdhan({ prayerName, isFajr }); }
+    catch (err) {
+      console.warn('Adhan playback blocked:', err);
+      setActiveAdhan(null);
+      if (notificationsActuallyWork()) {
+        // Use SW-based showNotification with a "Play" action button so the user
+        // can trigger the Adhan directly from the notification shade.
+        showNotificationViaSW(`🕌 ${prayerName} Prayer Time`, {
+          body: 'Tap to play the Adhan. (Browser blocked automatic playback.)',
+          icon: '/icon-192.png', badge: '/icon-192.png',
+          tag: `wird-adhan-blocked-${prayerName}-${new Date().toDateString()}`,
+          requireInteraction: true, silent: false,
+          data: { url: '/', action: 'play-adhan', prayerName },
+          actions: [
+            { action: 'play', title: '▶ Play Adhan' },
+          ],
+        });
+      }
+    }
+  }, [adhanVolume, adhanPlaybackSpeed, adhanPlayDua, stopAdhan]);
+
+  // ── iOS Audio Unlock ──
+  // iOS Safari blocks audio.play() unless a user has tapped at least once.
+  // Pre-unlock a silent Audio on first user gesture so subsequent timer-triggered
+  // playAdhan() calls succeed.
+  const audioUnlockedRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!audioAutoplayBlocked()) { audioUnlockedRef.current = true; return; }
+    const unlock = () => {
+      if (audioUnlockedRef.current) return;
+      try {
+        const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        silent.volume = 0;
+        silent.play().then(() => { audioUnlockedRef.current = true; silent.pause(); }).catch(() => {});
+      } catch { /* ignore */ }
+    };
+    const opts = { once: true, passive: true } as AddEventListenerOptions;
+    window.addEventListener('touchend', unlock, opts);
+    window.addEventListener('click', unlock, opts);
+    return () => {
+      window.removeEventListener('touchend', unlock);
+      window.removeEventListener('click', unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!adhanEnabled || !prayerTimes) {
+      if (adhanIntervalRef.current) { clearInterval(adhanIntervalRef.current); adhanIntervalRef.current = null; }
+      return;
+    }
+    const checkAdhan = () => {
+      const now = new Date();
+      const todayKey = now.toDateString();
+      const order: string[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      for (const name of order) {
+        if (!adhanEnabledPrayers[name]) continue;
+        const timeStr = prayerTimes[name];
+        if (!timeStr || timeStr === '--:--') continue;
+        const prayerDate = parsePrayerTimeToDate(timeStr, now);
+        if (!prayerDate) continue;
+        const diffMs = now.getTime() - prayerDate.getTime();
+        const key = `${name}-${todayKey}`;
+        if (diffMs >= 0 && diffMs < 60_000 && lastAdhanPlayedKeyRef.current !== key) {
+          lastAdhanPlayedKeyRef.current = key;
+          try { localStorage.setItem('wird-adhan-last', key); } catch {}
+          if (notificationsActuallyWork()) {
+            try {
+              // Use SW-based showNotification so action buttons work on Android
+              // and the notification survives even if the page is backgrounded.
+              showNotificationViaSW(`🕌 ${name} Prayer Time`, {
+                body: `It's time for ${name} prayer. Adhan is playing…`,
+                icon: '/icon-192.png', badge: '/icon-192.png',
+                tag: `wird-adhan-${key}`, requireInteraction: true, silent: false,
+                data: { url: '/', action: 'adhan' },
+                actions: [
+                  { action: 'stop', title: '⏹ Stop Adhan' },
+                ],
+              });
+            } catch {}
+          }
+          playAdhan(name);
+          break;
+        }
+      }
+    };
+    checkAdhan();
+    adhanIntervalRef.current = setInterval(checkAdhan, 15_000);
+    return () => { if (adhanIntervalRef.current) clearInterval(adhanIntervalRef.current); };
+  }, [adhanEnabled, prayerTimes, adhanEnabledPrayers, playAdhan]);
+
+  useEffect(() => {
+    return () => {
+      if (adhanAudioRef.current) { try { adhanAudioRef.current.pause(); } catch {} }
+      if (duaAudioRef.current) { try { duaAudioRef.current.pause(); } catch {} }
+      if (wakeLockRef.current) { try { wakeLockRef.current.release(); } catch {} }
+    };
+  }, []);
+
+  const toggleAdhanEnabled = useCallback(() => {
+    const next = !adhanEnabled;
+    setAdhanEnabled(next);
+    if (next) {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then((p) => setNotifPermission(p));
+      }
+    } else { stopAdhan(); }
+  }, [adhanEnabled, stopAdhan]);
+
+  const toggleAdhanPrayer = useCallback((name: string) => {
+    setAdhanEnabledPrayers((prev) => ({ ...prev, [name]: !prev[name] }));
+  }, []);
+
+  const testAdhan = useCallback(() => { playAdhan('Dhuhr'); }, [playAdhan]);
+
+  // ── SW message listener — handles action buttons from SW-based notifications ──
+  // When the user taps "Stop Adhan" or "Play Adhan" on the notification, the SW
+  // sends a postMessage to all clients. This listener receives it and acts.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'wird:adhan-stop') {
+        stopAdhan();
+      } else if (data.type === 'wird:adhan-play') {
+        const prayerName = data.prayerName || 'Dhuhr';
+        playAdhan(prayerName);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [stopAdhan, playAdhan]);
+
+  // ── Quran Verse Reminder State ──
+  // Periodically sends a notification with a random meaningful Quran verse
+  // in the user's preferred language. Intervals: 30min, 1h, 2h, 3h, 24h.
+  type VerseNotifInterval = '30m' | '1h' | '2h' | '3h' | '24h';
+  type VerseNotifLanguage = 'arabic' | 'english' | 'bangla' | 'all';
+  const VERSE_INTERVAL_MS: Record<VerseNotifInterval, number> = {
+    '30m': 30 * 60 * 1000,
+    '1h': 60 * 60 * 1000,
+    '2h': 2 * 60 * 60 * 1000,
+    '3h': 3 * 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+  };
+
+  const [verseNotifEnabled, setVerseNotifEnabled] = useState(false);
+  const [verseNotifInterval, setVerseNotifInterval] = useState<VerseNotifInterval>('1h');
+  const [verseNotifLanguage, setVerseNotifLanguage] = useState<VerseNotifLanguage>('english');
+  const verseNotifTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastVerseNotifTimeRef = useRef<number>(0);
+
+  // Load persisted verse-notif settings on mount
+  useEffect(() => {
+    try {
+      const e = localStorage.getItem('wird-verse-notif-enabled');
+      if (e === 'true') setVerseNotifEnabled(true);
+      const i = localStorage.getItem('wird-verse-notif-interval') as VerseNotifInterval | null;
+      if (i && ['30m', '1h', '2h', '3h', '24h'].includes(i)) setVerseNotifInterval(i);
+      const l = localStorage.getItem('wird-verse-notif-lang') as VerseNotifLanguage | null;
+      if (l && ['arabic', 'english', 'bangla', 'all'].includes(l)) setVerseNotifLanguage(l);
+      const last = localStorage.getItem('wird-verse-notif-last');
+      if (last) lastVerseNotifTimeRef.current = parseInt(last) || 0;
+    } catch { /* ignore */ }
+  }, []);
+
+  // Persist settings
+  useEffect(() => { try { localStorage.setItem('wird-verse-notif-enabled', String(verseNotifEnabled)); } catch {} }, [verseNotifEnabled]);
+  useEffect(() => { try { localStorage.setItem('wird-verse-notif-interval', verseNotifInterval); } catch {} }, [verseNotifInterval]);
+  useEffect(() => { try { localStorage.setItem('wird-verse-notif-lang', verseNotifLanguage); } catch {} }, [verseNotifLanguage]);
+
+  // Pick a random verse — uses a shuffled queue so EVERY verse in the pool is shown
+  // once before any verse repeats. Persists the remaining queue across reloads so a
+  // browser restart doesn't restart the cycle from scratch. Pool: 180 verses.
+  const verseQueueRef = useRef<string[]>([]);
+  const verseQueuePosRef = useRef<number>(0);
+
+  // Load persisted queue on mount
+  useEffect(() => {
+    try {
+      const savedQueue = localStorage.getItem('wird-verse-queue');
+      const savedPos = localStorage.getItem('wird-verse-queue-pos');
+      if (savedQueue) {
+        const queue = JSON.parse(savedQueue);
+        if (Array.isArray(queue) && queue.length > 0) {
+          verseQueueRef.current = queue;
+          verseQueuePosRef.current = savedPos ? parseInt(savedPos) || 0 : 0;
+          // Bounds check
+          if (verseQueuePosRef.current >= verseQueueRef.current.length) {
+            verseQueuePosRef.current = 0;
+          }
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+    // No persisted queue — build a fresh shuffled one
+    const ids = QURAN_VERSE_NOTIFICATIONS.map(v => v.id);
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    verseQueueRef.current = ids;
+    verseQueuePosRef.current = 0;
+  }, []);
+
+  // Persist queue whenever it changes
+  const persistVerseQueue = useCallback(() => {
+    try {
+      localStorage.setItem('wird-verse-queue', JSON.stringify(verseQueueRef.current));
+      localStorage.setItem('wird-verse-queue-pos', String(verseQueuePosRef.current));
+    } catch { /* ignore */ }
+  }, []);
+
+  const pickRandomVerse = useCallback((): QuranVerseNotif => {
+    const pool = QURAN_VERSE_NOTIFICATIONS;
+    if (pool.length === 0) {
+      return {
+        id: 'fallback',
+        arabic: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+        english: 'In the name of Allah, the Entirely Merciful, the Especially Merciful.',
+        bangla: 'পরম করুণাময় অসীম দয়ালু আল্লাহর নামে।',
+        reference: 'Al-Fatihah 1:1',
+        referenceAr: 'الفاتحة ١:١',
+        theme: 'Mercy',
+      };
+    }
+    // If queue is empty/invalid, rebuild it
+    if (verseQueueRef.current.length === 0) {
+      const ids = pool.map(v => v.id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      verseQueueRef.current = ids;
+      verseQueuePosRef.current = 0;
+    }
+    // If we've reached the end of the queue, reshuffle for the next cycle
+    if (verseQueuePosRef.current >= verseQueueRef.current.length) {
+      const ids = pool.map(v => v.id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      verseQueueRef.current = ids;
+      verseQueuePosRef.current = 0;
+    }
+    // Pick the next verse from the queue
+    const nextId = verseQueueRef.current[verseQueuePosRef.current];
+    verseQueuePosRef.current += 1;
+    persistVerseQueue();
+    const found = pool.find(v => v.id === nextId);
+    return found || pool[0];
+  }, [persistVerseQueue]);
+
+  // Build notification body based on selected language.
+  // - Truncates each language segment so the body fits platform limits (iOS ~150 chars,
+  //   Android lock screen shows only first line).
+  // - Wraps Arabic in RLE/PDF (\u202B...\u202C) and prepends LRM (\u200E) before
+  //   LTR punctuation to prevent bidi reordering glitches when mixing scripts.
+  const buildVerseNotifBody = useCallback((verse: QuranVerseNotif, lang: VerseNotifLanguage): { title: string; body: string; dir?: 'ltr' | 'rtl'; lang?: string } => {
+    const RLE = '\u202B'; const PDF = '\u202C'; const LRM = '\u200E';
+    const truncate = (s: string, max: number): string => s.length > max ? s.slice(0, max - 1) + '…' : s;
+    const refLine = `${LRM}— ${verse.reference}`;
+
+    if (lang === 'arabic') {
+      return {
+        title: `📖 ${verse.referenceAr} · ${verse.theme}`,
+        body: `${RLE}${verse.arabic}${PDF}\n\n${refLine}`,
+        dir: 'rtl',
+        lang: 'ar',
+      };
+    }
+    if (lang === 'bangla') {
+      return {
+        title: `📖 ${verse.reference} · ${verse.theme}`,
+        body: `${verse.bangla}\n\n${refLine}`,
+        dir: 'ltr',
+        lang: 'bn',
+      };
+    }
+    if (lang === 'all') {
+      // Truncate each segment so total body fits within ~250 chars (most platforms cap at 100-200).
+      const ar = truncate(verse.arabic, 80);
+      const en = truncate(verse.english, 100);
+      const bn = truncate(verse.bangla, 100);
+      return {
+        title: `📖 ${verse.reference} · ${verse.theme}`,
+        body: `${RLE}${ar}${PDF}\n\n${en}\n\n${bn}\n\n${refLine}`,
+        dir: 'ltr',
+        lang: 'en',
+      };
+    }
+    // Default: English
+    return {
+      title: `📖 ${verse.reference} · ${verse.theme}`,
+      body: `${verse.english}\n\n${refLine}`,
+      dir: 'ltr',
+      lang: 'en',
+    };
+  }, []);
+
+  // Send a verse notification immediately (used by both scheduler and Test button)
+  const sendVerseNotifNow = useCallback(() => {
+    if (!notificationsActuallyWork()) return;
+    const verse = pickRandomVerse();
+    const { title, body, dir, lang } = buildVerseNotifBody(verse, verseNotifLanguage);
+    try {
+      const notif = new Notification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: `wird-verse-${verse.id}-${Date.now()}`,
+        requireInteraction: false,
+        silent: false,
+        data: { url: '/' },
+        ...(dir ? { dir } : {}),
+        ...(lang ? { lang } : {}),
+      });
+      notif.onclick = () => { notif.close(); window.focus(); };
+      const now = Date.now();
+      lastVerseNotifTimeRef.current = now;
+      try { localStorage.setItem('wird-verse-notif-last', String(now)); } catch {}
+    } catch { /* ignore */ }
+  }, [pickRandomVerse, buildVerseNotifBody, verseNotifLanguage]);
+
+  // Scheduler — uses setTimeout so changing interval/language takes effect immediately
+  useEffect(() => {
+    if (!verseNotifEnabled || notifPermission !== 'granted') {
+      if (verseNotifTimeoutRef.current) {
+        clearTimeout(verseNotifTimeoutRef.current);
+        verseNotifTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    const scheduleNext = () => {
+      if (verseNotifTimeoutRef.current) clearTimeout(verseNotifTimeoutRef.current);
+      const intervalMs = VERSE_INTERVAL_MS[verseNotifInterval];
+      // If last notification was recent (within the interval), wait the remaining time
+      const elapsed = Date.now() - lastVerseNotifTimeRef.current;
+      const delay = Math.max(60_000, intervalMs - elapsed); // min 60s to avoid burst
+      verseNotifTimeoutRef.current = setTimeout(() => {
+        sendVerseNotifNow();
+        scheduleNext(); // schedule the next one
+      }, delay);
+    };
+
+    scheduleNext();
+    return () => {
+      if (verseNotifTimeoutRef.current) clearTimeout(verseNotifTimeoutRef.current);
+    };
+  }, [verseNotifEnabled, notifPermission, verseNotifInterval, sendVerseNotifNow]);
+
+  // Toggle verse-notif (requests notification permission if needed)
+  const toggleVerseNotifEnabled = useCallback(() => {
+    const next = !verseNotifEnabled;
+    setVerseNotifEnabled(next);
+    if (next) {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then((p) => setNotifPermission(p));
+      }
+    }
+  }, [verseNotifEnabled]);
+
+  const changeVerseNotifInterval = useCallback((i: VerseNotifInterval) => {
+    setVerseNotifInterval(i);
+  }, []);
+
+  const changeVerseNotifLanguage = useCallback((l: VerseNotifLanguage) => {
+    setVerseNotifLanguage(l);
+  }, []);
+
+  const testVerseNotif = useCallback(() => {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission().then((p) => {
+        setNotifPermission(p);
+        if (p === 'granted') setTimeout(sendVerseNotifNow, 200);
+      });
+    } else {
+      sendVerseNotifNow();
+    }
+  }, [sendVerseNotifNow]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--islamic-bg)] dark:bg-[#0F1A14] transition-colors duration-300">
@@ -1164,6 +3645,17 @@ export default function Home() {
                   showToast={showToast}
                   arabicFontSize={arabicFontSize}
                   onNavigateToListen={navigateToListen}
+                  location={location}
+                  locationName={locationName}
+                  locationDenied={locationDenied}
+                  prayerTimes={prayerTimes}
+                  currentTime={currentTime}
+                  refreshLocation={refreshLocation}
+                  notifEnabled={notifEnabled}
+                  notifPermission={notifPermission}
+                  notifAdvance={notifAdvance}
+                  toggleNotifEnabled={toggleNotifEnabled}
+                  changeNotifAdvance={changeNotifAdvance}
                 />
               </TabErrorBoundary>
             )}
@@ -1195,6 +3687,28 @@ export default function Home() {
                   toggleNotifEnabled={toggleNotifEnabled}
                   notifAdvance={notifAdvance}
                   changeNotifAdvance={changeNotifAdvance}
+                  calcConfig={calcConfig}
+                  changeCalcConfig={changeCalcConfig}
+                  adhanEnabled={adhanEnabled}
+                  toggleAdhanEnabled={toggleAdhanEnabled}
+                  adhanVolume={adhanVolume}
+                  setAdhanVolume={setAdhanVolume}
+                  adhanEnabledPrayers={adhanEnabledPrayers}
+                  toggleAdhanPrayer={toggleAdhanPrayer}
+                  adhanPlayDua={adhanPlayDua}
+                  setAdhanPlayDua={setAdhanPlayDua}
+                  adhanPlaybackSpeed={adhanPlaybackSpeed}
+                  setAdhanPlaybackSpeed={setAdhanPlaybackSpeed}
+                  testAdhan={testAdhan}
+                  stopAdhan={stopAdhan}
+                  notifPermissionStatus={notifPermission}
+                  verseNotifEnabled={verseNotifEnabled}
+                  toggleVerseNotifEnabled={toggleVerseNotifEnabled}
+                  verseNotifInterval={verseNotifInterval}
+                  changeVerseNotifInterval={changeVerseNotifInterval}
+                  verseNotifLanguage={verseNotifLanguage}
+                  changeVerseNotifLanguage={changeVerseNotifLanguage}
+                  testVerseNotif={testVerseNotif}
                 />
               </TabErrorBoundary>
             )}
@@ -1217,7 +3731,54 @@ export default function Home() {
         />
       )}
 
-      {/* PWA Install Banner */}
+      {/* Adhan Alarm Overlay — full-screen modal when Adhan is playing */}
+      {activeAdhan && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <motion.div
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative w-full max-w-md bg-gradient-to-br from-[#0D4B3C] to-[#0A2A1F] rounded-3xl shadow-2xl overflow-hidden border-2 border-[#C8A951]/40"
+          >
+            <div className="h-2 bg-gradient-to-r from-[#C8A951] via-[#F4D785] to-[#C8A951]" />
+            <div className="flex justify-center pt-8 pb-2">
+              <motion.div
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-[#C8A951]/30 to-[#0D4B3C]/40 flex items-center justify-center border-2 border-[#C8A951]/50 shadow-[0_0_40px_rgba(200,169,81,0.4)]"
+              >
+                <span className="text-5xl">🕌</span>
+              </motion.div>
+            </div>
+            <div className="px-6 pb-8 pt-4 text-center">
+              <p className="text-[#C8A951]/80 text-xs uppercase tracking-widest font-semibold mb-1">Prayer Time</p>
+              <h2 className="text-3xl font-bold text-white mb-2">{activeAdhan.prayerName}</h2>
+              <p className="text-[#C8A951] text-sm mb-1">Adhan is playing</p>
+              <p className="text-white/60 text-xs mb-6">
+                {activeAdhan.isFajr ? 'Recited by Mishary Rashid al-Afasy' : 'Recited by Nasser al-Qatami'}
+              </p>
+              <div className="flex items-center justify-center gap-1.5 mb-6">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ height: [8, 28, 8] }}
+                    transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: 'easeInOut' }}
+                    className="w-1.5 bg-[#C8A951] rounded-full"
+                  />
+                ))}
+              </div>
+              <button
+                onClick={stopAdhan}
+                className="w-full py-3.5 px-6 rounded-xl bg-[#C8A951] hover:bg-[#D4B964] text-[#0D4B3C] font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Square className="w-4 h-4" /> Stop Adhan
+              </button>
+              <p className="text-white/40 text-[10px] mt-3">Hayya &apos;ala-s-Salah · Hayya &apos;ala-l-Falah</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* PWA Install Banner (Android Chrome / desktop — fires beforeinstallprompt) */}
       {showInstallBanner && installPrompt && !installDismissed && (
         <div className="fixed bottom-16 left-0 right-0 z-50 p-3 safe-area-bottom install-banner-animate">
           <div className="max-w-lg mx-auto bg-white dark:bg-[#162118] rounded-2xl shadow-xl border border-[#E5E1D8] dark:border-[#2D3E34] p-4 flex items-center gap-3">
@@ -1229,15 +3790,44 @@ export default function Home() {
             <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={dismissInstall}
-                className="px-3 py-2 text-xs text-[#6B7280] dark:text-[#9CA3AF] rounded-lg hover:bg-[#F0EDE4] dark:hover:bg-[#1E2E24]"
+                className="px-3 py-2 min-h-[44px] text-xs text-[#6B7280] dark:text-[#9CA3AF] rounded-lg hover:bg-[#F0EDE4] dark:hover:bg-[#1E2E24]"
               >
                 Later
               </button>
               <button
                 onClick={handleInstall}
-                className="px-4 py-2 text-xs font-semibold bg-[#0D4B3C] text-white rounded-lg hover:bg-[#0D4B3C]/90 active:scale-95 transition-all"
+                className="px-4 py-2 min-h-[44px] text-xs font-semibold bg-[#0D4B3C] text-white rounded-lg hover:bg-[#0D4B3C]/90 active:scale-95 transition-all"
               >
                 Install
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* iOS Install Instructions Banner (iOS Safari never fires beforeinstallprompt) */}
+      {showInstallBanner && !installPrompt && !installDismissed && isIOSSafariNonPWA() && (
+        <div className="fixed bottom-16 left-0 right-0 z-50 p-3 safe-area-bottom install-banner-animate">
+          <div className="max-w-lg mx-auto bg-white dark:bg-[#162118] rounded-2xl shadow-xl border border-[#E5E1D8] dark:border-[#2D3E34] p-4">
+            <div className="flex items-start gap-3">
+              <img src="/icon-192.png" alt="Wird" className="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird on iPhone</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1 leading-relaxed">
+                  Tap the <strong>Share</strong> icon
+                  <svg viewBox="0 0 24 24" className="inline w-3.5 h-3.5 mx-0.5 -mt-0.5" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                  in Safari, then scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+                </p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1.5 leading-relaxed">
+                  📱 Required for Adhan alarms & notifications to work on iPhone.
+                </p>
+              </div>
+              <button
+                onClick={dismissInstall}
+                aria-label="Dismiss"
+                className="flex-shrink-0 p-2 min-h-[44px] min-w-[44px] text-[#6B7280] dark:text-[#9CA3AF] rounded-lg hover:bg-[#F0EDE4] dark:hover:bg-[#1E2E24]"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1276,7 +3866,7 @@ function IslamicHeader({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0D4B3C]/95 dark:bg-[#0A1510]/95 backdrop-blur-md border-b border-[#C8A951]/20">
+    <header className="sticky top-0 z-40 bg-[#0D4B3C]/95 safe-area-top dark:bg-[#0A1510]/95 backdrop-blur-md border-b border-[#C8A951]/20">
       <div className="max-w-4xl mx-auto px-4">
         {/* Top Row */}
         <div className="flex items-center justify-between h-14">
@@ -1364,7 +3954,7 @@ function MobileBottomNav({
                 setActiveTab(tab.id);
                 if (tab.id === 'quran') setSelectedSurah(null);
               }}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-200 min-w-[3rem] min-h-[44px] ${
+              className={`flex flex-col items-center gap-0.5 px-1 sm:px-2 py-1.5 rounded-xl transition-all duration-200 flex-1 min-w-0 min-h-[44px] ${
                 isActive
                   ? 'text-[#0D4B3C] dark:text-[#C8A951]'
                   : 'text-[#6B7280] dark:text-[#9CA3AF]'
@@ -1373,7 +3963,7 @@ function MobileBottomNav({
               <div className={`p-1.5 rounded-xl transition-all duration-200 ${isActive ? 'bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10' : ''}`}>
                 <Icon className={`w-5 h-5 ${isActive ? 'text-[#0D4B3C] dark:text-[#C8A951]' : ''}`} />
               </div>
-              <span className={`text-[10px] font-medium ${isActive ? 'font-semibold' : ''}`}>{tab.label}</span>
+              <span className={`text-[10px] font-medium hidden min-[360px]:inline ${isActive ? 'font-semibold' : ''}`}>{tab.label}</span>
             </button>
           );
         })}
@@ -1778,7 +4368,7 @@ function SurahReader({
                     {/* Play/Pause button */}
                     <button
                       onClick={() => playAyah(ayah.number)}
-                      className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 ${
+                      className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 ${
                         playingAyah === ayah.number
                           ? 'bg-[#C8A951]/20 text-[#C8A951] animate-pulse'
                           : 'text-[#9CA3AF] hover:text-[#C8A951] hover:bg-[#C8A951]/10'
@@ -1797,7 +4387,7 @@ function SurahReader({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="w-8 h-8"
+                        className="w-10 h-10 min-h-[44px] min-w-[44px]"
                         onClick={() => handleBookmark(ayah, englishVerses[idx])}
                       >
                         <Heart className={`w-4 h-4 ${isBookmarked(surahNumber, ayah.numberInSurah) ? 'fill-[#C8A951] text-[#C8A951]' : 'text-[#6B7280]'}`} />
@@ -2885,7 +5475,7 @@ function MiniPlayer({
         <div className="flex items-center gap-2">
           <button
             onClick={skipPrev}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
           >
             <SkipBack className="w-4 h-4" />
           </button>
@@ -2907,7 +5497,7 @@ function MiniPlayer({
 
           <button
             onClick={skipNext}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-[#0D4B3C] dark:text-[#C8A951] hover:bg-[#0D4B3C]/10 dark:hover:bg-[#C8A951]/10 transition-all"
           >
             <SkipForward className="w-4 h-4" />
           </button>
@@ -3662,10 +6252,10 @@ function MoodQuiz({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
           className="relative -mx-4 -mt-6 sm:-mx-6"
-          style={{ minHeight: 'calc(100vh - 8rem)' }}
+          style={{ minHeight: 'calc(100dvh - 8rem)' }}
         >
           <motion.div
-            className="relative h-full min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center cursor-pointer px-6 py-12 overflow-hidden"
+            className="relative h-full min-h-[calc(100dvh-8rem)] flex flex-col items-center justify-center cursor-pointer px-6 py-12 overflow-hidden"
             onClick={handleStart}
             whileTap={{ scale: 0.995 }}
           >
@@ -3779,7 +6369,7 @@ function MoodQuiz({
 
               {/* Trust indicators */}
               <motion.div
-                className="mt-8 flex items-center justify-center gap-6 text-white/30 text-xs"
+                className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-white/30 text-xs"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
@@ -3937,7 +6527,7 @@ function MoodQuiz({
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="w-8 h-8" onClick={handleCopyDua}>
+                      <Button variant="ghost" size="icon" className="w-10 h-10 min-h-[44px] min-w-[44px]" onClick={handleCopyDua}>
                         <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
                       </Button>
                     </TooltipTrigger>
@@ -4059,12 +6649,34 @@ function DailyMotivation({
   showToast,
   arabicFontSize,
   onNavigateToListen,
+  location,
+  locationName,
+  locationDenied,
+  prayerTimes,
+  currentTime,
+  refreshLocation,
+  notifEnabled,
+  notifPermission,
+  notifAdvance,
+  toggleNotifEnabled,
+  changeNotifAdvance,
 }: {
   addBookmark: (b: BookmarkItem) => void;
   isBookmarked: (s: number, a: number) => boolean;
   showToast: (msg: string) => void;
   arabicFontSize: string;
   onNavigateToListen: (surahNumber: number) => void;
+  location: { lat: number; lng: number } | null;
+  locationName: string | null;
+  locationDenied: boolean;
+  prayerTimes: Record<string, string> | null;
+  currentTime: Date;
+  refreshLocation: () => void;
+  notifEnabled: boolean;
+  notifPermission: NotificationPermission | 'default';
+  notifAdvance: number;
+  toggleNotifEnabled: () => void;
+  changeNotifAdvance: (mins: number) => void;
 }) {
   const [dailyVerse, setDailyVerse] = useState<{
     arabic: string;
@@ -4106,192 +6718,7 @@ function DailyMotivation({
     return BUNDLED_HADITHS[dayOfYear % BUNDLED_HADITHS.length];
   });
 
-  // ── Prayer Times State ──
-  const [location, setLocation] = useState<{lat: number; lng: number} | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const cached = localStorage.getItem('wird-location');
-      if (cached) return JSON.parse(cached);
-    } catch {}
-    return null;
-  });
-  const [locationName, setLocationName] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem('wird-location-name');
-    } catch { return null; }
-  });
-  const [prayerTimes, setPrayerTimes] = useState<Record<string, string> | null>(null);
-  const [locationDenied, setLocationDenied] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  // ── Prayer Notification State ──
-  const [notifEnabled, setNotifEnabled] = useState(false);
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'default'>('default');
-  const [notifAdvance, setNotifAdvance] = useState(15);
-  const [lastNotifiedPrayer, setLastNotifiedPrayer] = useState<string | null>(null);
-  const notifIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Load notification settings
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('wird-notif-enabled');
-      if (saved === 'true') setNotifEnabled(true);
-      const savedAdv = localStorage.getItem('wird-notif-advance');
-      if (savedAdv) setNotifAdvance(parseInt(savedAdv) || 15);
-      const savedLast = localStorage.getItem('wird-notif-last');
-      if (savedLast) setLastNotifiedPrayer(savedLast);
-    } catch { /* ignore */ }
-
-    // Check current permission
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotifPermission(Notification.permission);
-    }
-  }, []);
-
-  // Request notification permission
-  const requestNotifPermission = useCallback(async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    try {
-      const perm = await Notification.requestPermission();
-      setNotifPermission(perm);
-      if (perm === 'granted') {
-        setNotifEnabled(true);
-        try { localStorage.setItem('wird-notif-enabled', 'true'); } catch { /* ignore */ }
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  // Toggle notifications
-  const toggleNotifEnabled = useCallback(() => {
-    if (notifPermission !== 'granted') {
-      requestNotifPermission();
-      return;
-    }
-    const next = !notifEnabled;
-    setNotifEnabled(next);
-    try { localStorage.setItem('wird-notif-enabled', String(next)); } catch { /* ignore */ }
-    if (!next) {
-      setLastNotifiedPrayer(null);
-      try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
-    }
-  }, [notifEnabled, notifPermission, requestNotifPermission]);
-
-  // Change advance time
-  const changeNotifAdvance = useCallback((mins: number) => {
-    setNotifAdvance(mins);
-    try { localStorage.setItem('wird-notif-advance', String(mins)); } catch { /* ignore */ }
-  }, []);
-
-  // Notification checker — runs every 30 seconds
-  useEffect(() => {
-    if (!notifEnabled || notifPermission !== 'granted') {
-      if (notifIntervalRef.current) {
-        clearInterval(notifIntervalRef.current);
-        notifIntervalRef.current = null;
-      }
-      return;
-    }
-
-    const checkAndNotify = () => {
-      if (!prayerTimes) return;
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const order = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-
-      for (const name of order) {
-        const timeStr = prayerTimes[name];
-        if (!timeStr || timeStr === '--:--') continue;
-        const parts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/);
-        if (!parts) continue;
-        let h = parseInt(parts[1]);
-        const m = parseInt(parts[2]);
-        if (parts[3] === 'PM' && h !== 12) h += 12;
-        if (parts[3] === 'AM' && h === 12) h = 0;
-        const prayerMinutes = h * 60 + m;
-        const diff = prayerMinutes - currentMinutes;
-
-        // If prayer is within the advance window and not yet notified
-        if (diff > 0 && diff <= notifAdvance && lastNotifiedPrayer !== name) {
-          new Notification(`🕌 ${name} Prayer in ${diff} min`, {
-            body: `Prepare for ${name} prayer at ${timeStr}. May Allah accept your prayers.`,
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            tag: `wird-${name}-${now.toDateString()}`,
-            requireInteraction: false,
-            silent: false,
-          });
-          setLastNotifiedPrayer(name);
-          try { localStorage.setItem('wird-notif-last', name); } catch { /* ignore */ }
-          break;
-        }
-
-        // Reset lastNotifiedPrayer if the prayer time has passed
-        if (diff <= 0 && lastNotifiedPrayer === name) {
-          setLastNotifiedPrayer(null);
-          try { localStorage.removeItem('wird-notif-last'); } catch { /* ignore */ }
-        }
-      }
-    };
-
-    checkAndNotify();
-    notifIntervalRef.current = setInterval(checkAndNotify, 30000);
-    return () => {
-      if (notifIntervalRef.current) clearInterval(notifIntervalRef.current);
-    };
-  }, [notifEnabled, notifPermission, prayerTimes, notifAdvance, lastNotifiedPrayer]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (location) {
-      setPrayerTimes(calculatePrayerTimes(location.lat, location.lng, new Date()));
-      return;
-    }
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setLocation(loc);
-          setLocationDenied(false);
-          try { localStorage.setItem('wird-location', JSON.stringify(loc)); } catch {}
-          // Reverse geocode to get location name
-          (async () => {
-            try {
-              const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10&accept-language=en`);
-              if (geoRes.ok) {
-                const geoData = await geoRes.json();
-                const name = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || 'Your Location';
-                setLocationName(name);
-                try { localStorage.setItem('wird-location-name', name); } catch {}
-              }
-            } catch {}
-          })();
-        },
-        () => {
-          const mecca = { lat: 21.4225, lng: 39.8262 };
-          setLocation(mecca);
-          setLocationDenied(true);
-        },
-        { timeout: 5000 }
-      );
-    } else {
-      setLocation({ lat: 21.4225, lng: 39.8262 });
-      setLocationDenied(true);
-    }
-  }, [location]);
-
-  const refreshLocation = useCallback(() => {
-    try { localStorage.removeItem('wird-location'); } catch {}
-    try { localStorage.removeItem('wird-location-name'); } catch {}
-    setLocation(null);
-    setLocationName(null);
-    setPrayerTimes(null);
-    setLocationDenied(false);
-  }, []);
+  // (Prayer/Notif/Adhan/CalcConfig state lifted to Home — received as props)
 
   const nextPrayer = prayerTimes ? getNextPrayer(prayerTimes) : null;
 
@@ -4784,7 +7211,7 @@ function DailyMotivation({
                                           speakSitDua(dua.arabic, 'ar');
                                         }
                                       }}
-                                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 ${
                                         isSitSpeaking && sitSpeakingLang === 'ar'
                                           ? 'bg-[#0D4B3C] text-white dark:bg-[#C8A951] dark:text-[#0D4B3C]'
                                           : 'bg-[#0D4B3C]/10 text-[#0D4B3C] dark:bg-[#C8A951]/10 dark:text-[#C8A951] hover:bg-[#0D4B3C]/20'
@@ -5743,13 +8170,13 @@ function BookmarksView({
                         <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Verse {bookmark.ayahNumber}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="w-8 h-8"
+                            className="w-10 h-10 min-h-[44px] min-w-[44px]"
                             onClick={() => onSelect(bookmark.surahNumber)}
                           >
                             <BookOpen className="w-4 h-4 text-[#0D4B3C] dark:text-[#C8A951]" />
@@ -5762,7 +8189,7 @@ function BookmarksView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="w-8 h-8"
+                            className="w-10 h-10 min-h-[44px] min-w-[44px]"
                             onClick={() => handleDelete(bookmark.surahNumber, bookmark.ayahNumber)}
                           >
                             <Trash2 className="w-4 h-4 text-red-400 hover:text-red-500" />
@@ -5811,6 +8238,28 @@ function SettingsView({
   toggleNotifEnabled,
   notifAdvance,
   changeNotifAdvance,
+  calcConfig,
+  changeCalcConfig,
+  adhanEnabled,
+  toggleAdhanEnabled,
+  adhanVolume,
+  setAdhanVolume,
+  adhanEnabledPrayers,
+  toggleAdhanPrayer,
+  adhanPlayDua,
+  setAdhanPlayDua,
+  adhanPlaybackSpeed,
+  setAdhanPlaybackSpeed,
+  testAdhan,
+  stopAdhan,
+  notifPermissionStatus,
+  verseNotifEnabled,
+  toggleVerseNotifEnabled,
+  verseNotifInterval,
+  changeVerseNotifInterval,
+  verseNotifLanguage,
+  changeVerseNotifLanguage,
+  testVerseNotif,
 }: {
   isDark: boolean;
   toggleTheme: () => void;
@@ -5821,6 +8270,28 @@ function SettingsView({
   toggleNotifEnabled: () => void;
   notifAdvance: number;
   changeNotifAdvance: (mins: number) => void;
+  calcConfig: PrayerCalcConfig;
+  changeCalcConfig: (next: Partial<PrayerCalcConfig>) => void;
+  adhanEnabled: boolean;
+  toggleAdhanEnabled: () => void;
+  adhanVolume: number;
+  setAdhanVolume: (v: number) => void;
+  adhanEnabledPrayers: Record<string, boolean>;
+  toggleAdhanPrayer: (name: string) => void;
+  adhanPlayDua: boolean;
+  setAdhanPlayDua: (v: boolean) => void;
+  adhanPlaybackSpeed: number;
+  setAdhanPlaybackSpeed: (v: number) => void;
+  testAdhan: () => void;
+  stopAdhan: () => void;
+  notifPermissionStatus: NotificationPermission | 'default';
+  verseNotifEnabled: boolean;
+  toggleVerseNotifEnabled: () => void;
+  verseNotifInterval: '30m' | '1h' | '2h' | '3h' | '24h';
+  changeVerseNotifInterval: (i: '30m' | '1h' | '2h' | '3h' | '24h') => void;
+  verseNotifLanguage: 'arabic' | 'english' | 'bangla' | 'all';
+  changeVerseNotifLanguage: (l: 'arabic' | 'english' | 'bangla' | 'all') => void;
+  testVerseNotif: () => void;
 }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -5858,7 +8329,322 @@ function SettingsView({
         </CardContent>
       </Card>
 
-      {/* Prayer Notifications */}
+      {/* Prayer Calculation Method */}
+      <Card className="overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-[#0D4B3C] dark:text-[#C8A951]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Prayer Time Calculation</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Tune prayer times for your region</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-1.5 block">Calculation Method</label>
+              <select
+                value={calcConfig.method}
+                onChange={(e) => changeCalcConfig({ method: e.target.value as CalcMethodId })}
+                className="w-full px-3 py-2 rounded-lg border border-[#E5E1D8] dark:border-[#2D3E34] bg-white dark:bg-[#162118] text-sm text-[#1A1A2E] dark:text-[#E8E0D0] focus:border-[#C8A951] focus:outline-none focus:ring-2 focus:ring-[#C8A951]/20"
+              >
+                {CALC_METHODS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label} — {m.region}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-1.5 block">Asr Madhab (School of Thought)</label>
+              <div className="flex items-center gap-2">
+                {MADHABS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => changeCalcConfig({ madhab: m.id })}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all ${
+                      calcConfig.madhab === m.id
+                        ? 'border-[#C8A951] bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                        : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#C8A951]/40'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] mt-1.5">
+                Hanafi uses later Asr time (shadow length = 2× object length). Others use 1×.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Adhan Alarm — the headline feature */}
+      <Card className="overflow-hidden border-2 border-[#C8A951]/40">
+        <div className="h-1.5 bg-gradient-to-r from-[#C8A951] via-[#0D4B3C] to-[#C8A951]" />
+        <CardContent className="p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C8A951]/20 to-[#0D4B3C]/20 flex items-center justify-center">
+                <Volume2 className={`w-5 h-5 ${adhanEnabled ? 'text-[#C8A951]' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Adhan Alarm</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  {adhanEnabled ? 'Plays full Adhan when prayer time begins' : 'Enable to play Adhan at each prayer time'}
+                </p>
+              </div>
+            </div>
+            <Switch checked={adhanEnabled} onCheckedChange={toggleAdhanEnabled} />
+          </div>
+
+          {adhanEnabled && (
+            <>
+              <div className="p-3 rounded-lg bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#0D4B3C]/10 dark:border-[#C8A951]/10">
+                <p className="text-xs font-semibold text-[#0D4B3C] dark:text-[#C8A951] mb-0.5">🎵 Reciter</p>
+                <p className="text-xs text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                  Fajr: <strong>Mishary Rashid al-Afasy</strong> (with &ldquo;Prayer is better than sleep&rdquo;)
+                  <br />
+                  Other prayers: <strong>Nasser al-Qatami</strong>
+                  <br />
+                  <span className="text-[10px] text-[#9CA3AF]">Public Domain · Internet Archive</span>
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-2">Play Adhan for:</p>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {(['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const).map((name) => {
+                    const enabled = adhanEnabledPrayers[name];
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => toggleAdhanPrayer(name)}
+                        className={`py-2 px-1 rounded-lg border-2 text-xs font-medium transition-all ${
+                          enabled
+                            ? 'border-[#C8A951] bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                            : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#9CA3AF] opacity-60'
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF]">Volume</p>
+                  <span className="text-xs text-[#9CA3AF]">{Math.round(adhanVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={adhanVolume}
+                  onChange={(e) => setAdhanVolume(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-lg appearance-none cursor-pointer accent-[#C8A951]"
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-2">Playback Speed</p>
+                <div className="flex items-center gap-2">
+                  {[
+                    { v: 0.8, label: '0.8×' },
+                    { v: 1, label: '1×' },
+                    { v: 1.1, label: '1.1×' },
+                    { v: 1.25, label: '1.25×' },
+                  ].map(({ v, label }) => (
+                    <button
+                      key={v}
+                      onClick={() => setAdhanPlaybackSpeed(v)}
+                      className={`flex-1 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${
+                        adhanPlaybackSpeed === v
+                          ? 'border-[#C8A951] bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                          : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#C8A951]/40'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <p className="text-xs font-medium text-[#1A1A2E] dark:text-[#E8E0D0]">Play Dua after Adhan</p>
+                  <p className="text-[10px] text-[#9CA3AF]">Sunnah dua recited after the Adhan</p>
+                </div>
+                <Switch checked={adhanPlayDua} onCheckedChange={setAdhanPlayDua} />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+                <Button
+                  onClick={testAdhan}
+                  size="sm"
+                  className="flex-1 bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white"
+                >
+                  <Play className="w-3.5 h-3.5 mr-1.5" /> Test Adhan
+                </Button>
+                <Button
+                  onClick={stopAdhan}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 border-[#0D4B3C]/30 text-[#0D4B3C] dark:text-[#C8A951] dark:border-[#C8A951]/30"
+                >
+                  <Square className="w-3.5 h-3.5 mr-1.5" /> Stop
+                </Button>
+              </div>
+
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <strong>📱 For alarm-like behavior:</strong>
+                  <br />
+                  1. Install Wird as a PWA (Add to Home Screen)
+                  <br />
+                  2. Allow notifications when prompted
+                  <br />
+                  3. Keep the app open in background (or a tab) — browsers can&apos;t play audio from a fully-closed app
+                  <br />
+                  4. On Android Chrome, notifications will ring even on a locked phone
+                </p>
+              </div>
+
+              {notifPermissionStatus === 'denied' && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40">
+                  <p className="text-[11px] text-red-700 dark:text-red-300 leading-relaxed">
+                    Notifications are blocked. Adhan audio will still play when the app is open,
+                    but you won&apos;t get the system notification. To enable: browser settings → Site Settings → Notifications → Allow.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quran Verse Reminder — periodic verse notifications */}
+      <Card className="overflow-hidden border-2 border-[#0D4B3C]/30 dark:border-[#C8A951]/30">
+        <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
+        <CardContent className="p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0D4B3C]/20 to-[#C8A951]/20 flex items-center justify-center">
+                <BookOpen className={`w-5 h-5 ${verseNotifEnabled ? 'text-[#0D4B3C] dark:text-[#C8A951]' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Quran Verse Reminder</p>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  {verseNotifEnabled
+                    ? `A random verse every ${verseNotifInterval === '30m' ? '30 minutes' : verseNotifInterval === '24h' ? '24 hours' : verseNotifInterval.replace('h', ' hours')}`
+                    : 'Get a meaningful Quran verse at your chosen interval'}
+                </p>
+              </div>
+            </div>
+            <Switch checked={verseNotifEnabled} onCheckedChange={toggleVerseNotifEnabled} />
+          </div>
+
+          {verseNotifEnabled && (
+            <>
+              {/* Interval picker */}
+              <div>
+                <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-2">Frequency</p>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {([
+                    { v: '30m' as const, label: '30 min' },
+                    { v: '1h' as const, label: '1 hour' },
+                    { v: '2h' as const, label: '2 hours' },
+                    { v: '3h' as const, label: '3 hours' },
+                    { v: '24h' as const, label: '24 hours' },
+                  ]).map(({ v, label }) => (
+                    <button
+                      key={v}
+                      onClick={() => changeVerseNotifInterval(v)}
+                      className={`py-2 px-1 rounded-lg border-2 text-[11px] font-medium transition-all ${
+                        verseNotifInterval === v
+                          ? 'border-[#0D4B3C] dark:border-[#C8A951] bg-[#0D4B3C]/5 dark:bg-[#C8A951]/10 text-[#0D4B3C] dark:text-[#C8A951]'
+                          : 'border-[#E5E1D8] dark:border-[#2D3E34] text-[#6B7280] dark:text-[#9CA3AF] hover:border-[#0D4B3C]/40 dark:hover:border-[#C8A951]/40'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Language picker */}
+              <div>
+                <p className="text-xs font-medium text-[#4A5568] dark:text-[#9CA3AF] mb-2">Preferred Language</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {([
+                    { v: 'arabic' as const, label: 'العربية', sublabel: 'Arabic' },
+                    { v: 'english' as const, label: 'English', sublabel: 'EN' },
+                    { v: 'bangla' as const, label: 'বাংলা', sublabel: 'Bangla' },
+                    { v: 'all' as const, label: 'All 3', sublabel: 'AR+EN+BN' },
+                  ]).map(({ v, label, sublabel }) => (
+                    <button
+                      key={v}
+                      onClick={() => changeVerseNotifLanguage(v)}
+                      className={`py-2 px-1 rounded-lg border-2 text-center transition-all ${
+                        verseNotifLanguage === v
+                          ? 'border-[#0D4B3C] dark:border-[#C8A951] bg-[#0D4B3C]/5 dark:bg-[#C8A951]/10'
+                          : 'border-[#E5E1D8] dark:border-[#2D3E34] hover:border-[#0D4B3C]/40 dark:hover:border-[#C8A951]/40'
+                      }`}
+                    >
+                      <p className={`text-xs font-medium ${verseNotifLanguage === v ? 'text-[#0D4B3C] dark:text-[#C8A951]' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}>
+                        {label}
+                      </p>
+                      <p className="text-[9px] text-[#9CA3AF] mt-0.5">{sublabel}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Test button */}
+              <div className="pt-2 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
+                <Button
+                  onClick={testVerseNotif}
+                  size="sm"
+                  className="w-full bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white"
+                >
+                  <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Send Test Verse Now
+                </Button>
+              </div>
+
+              {/* Pool info */}
+              <div className="p-3 rounded-lg bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#0D4B3C]/10 dark:border-[#C8A951]/10">
+                <p className="text-[11px] text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                  📖 Drawing from <strong>{180} unique Quran verses</strong> covering themes like
+                  patience, mercy, gratitude, forgiveness, hope, trust, remembrance,
+                  knowledge, prayer, charity, paradise, guidance, justice, creation, and dua.
+                </p>
+                <p className="text-[11px] text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed mt-1.5">
+                  🔀 <strong>No-repeat shuffling:</strong> Every verse is shown once before any verse repeats —
+                  so you&apos;ll see all 180 unique verses across multiple notifications before cycling back.
+                </p>
+                <p className="text-[11px] text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed mt-1.5">
+                  🌐 Each verse includes Arabic text, English (Sahih International style), and Bengali translation.
+                </p>
+              </div>
+
+              {notifPermissionStatus !== 'granted' && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                    Notifications permission is needed. Tap the toggle again or your browser may prompt you.
+                    If blocked, enable in: browser settings → Site Settings → Notifications → Allow.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pre-Prayer Reminder */}
       <Card className="overflow-hidden">
         <div className="h-1 bg-gradient-to-r from-[#C8A951] via-[#0D4B3C] to-[#C8A951]" />
         <CardContent className="p-5 space-y-4">
@@ -5870,7 +8656,7 @@ function SettingsView({
                   : <BellOff className="w-5 h-5 text-[#6B7280] dark:text-[#9CA3AF]" />}
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Prayer Notifications</p>
+                <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">Pre-Prayer Reminder</p>
                 <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
                   {notifPermission === 'denied'
                     ? 'Notifications blocked by browser'
@@ -5990,7 +8776,7 @@ function SettingsView({
             </div>
             <div>
               <p className="text-sm font-semibold text-[#1A1A2E] dark:text-[#E8E0D0]">About Wird</p>
-              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Version 1.0.0</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Version 1.1.0 · Adhan Edition</p>
             </div>
           </div>
           <div className="space-y-3 text-sm text-[#4A5568] dark:text-[#9CA3AF]">
@@ -6000,11 +8786,15 @@ function SettingsView({
             </p>
             <p>
               Features include a complete Quran reader with word-for-word translation, daily motivational verses,
-              curated Hadiths, and a personal bookmark system.
+              curated Hadiths, prayer times with Adhan alarm, and a personal bookmark system.
             </p>
             <Separator className="my-3" />
             <p className="text-xs">
               Quran data provided by <strong>alquran.cloud</strong> API.
+              <br />
+              Adhan audio from <strong>Internet Archive</strong> (Public Domain).
+              <br />
+              Prayer times by <strong>adhan.js</strong> (batoulapps).
               <br />
               Built with ❤️ for the Muslim Ummah.
             </p>

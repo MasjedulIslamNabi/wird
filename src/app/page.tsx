@@ -8300,14 +8300,76 @@ function SettingsView({
         <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Customize your reading experience</p>
       </div>
 
-      {/* Install App */}
-      <Card className="border border-[#C8A951]/30 bg-[#C8A951]/5">
-        <CardContent className="p-4 flex items-center gap-3">
-          <img src="/icon-192.png" alt="Wird" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-[#0D4B3C] dark:text-[#C8A951]">Install Wird App</p>
-            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Add to home screen for quick access, or use your browser's menu → &quot;Add to Home Screen&quot; or &quot;Install App&quot;</p>
+      {/* Install App — platform-aware */}
+      <Card className="border border-[#C8A951]/30 bg-[#C8A951]/5 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-[#C8A951] via-[#0D4B3C] to-[#C8A951]" />
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <img src="/icon-192.png" alt="Wird" className="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+            <div>
+              <p className="text-sm font-bold text-[#0D4B3C] dark:text-[#C8A951]">Get the Wird App</p>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Install on your phone for the best experience with native notifications</p>
+            </div>
           </div>
+
+          {/* Android: direct APK download */}
+          {typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent) && (
+            <div className="space-y-3">
+              <a
+                href="https://github.com/MasjedulIslamNabi/wird/releases/latest/download/app-debug.apk"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white font-semibold text-sm shadow-lg transition-all active:scale-95"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor"><path d="M17.523 15.341c-.247 0-.466.254-.466.501 0 .247.219.501.466.501.248 0 .466-.254.466-.501 0-.247-.218-.501-.466-.501m-3.058 1.663c0 .247.218.501.466.501.247 0 .466-.254.466-.501 0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501M22 12.5c0-1.252-.97-2.282-2.218-2.282-1.247 0-2.218 1.03-2.218 2.282 0 1.252.97 2.282 2.218 2.282C21.03 14.782 22 13.752 22 12.5m-2.218-2.282c-1.247 0-2.218 1.03-2.218 2.282 0 1.252.97 2.282 2.218 2.282 1.248 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282M5.672 14.341c0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501 0 .247.218.501.466.501.247 0 .466-.254.466-.501m1.064 1.663c0-.247-.219-.501-.466-.501-.248 0-.466.254-.466.501 0 .247.218.501.466.501.247 0 .466-.254.466-.501M2 8.5c0 1.252.97 2.282 2.218 2.282 1.247 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282C2.97 6.218 2 7.248 2 8.5M3.832 4.396c0 1.04.849 1.888 1.888 1.888 1.04 0 1.888-.849 1.888-1.888 0-1.04-.849-1.888-1.888-1.888-1.04 0-1.888.849-1.888 1.888M7.5 8.5c0 .998.811 1.809 1.809 1.809.998 0 1.809-.811 1.809-1.809 0-.998-.811-1.809-1.809-1.809C8.311 6.691 7.5 7.502 7.5 8.5m4.094 0c0 .998.811 1.809 1.809 1.809.998 0 1.809-.811 1.809-1.809 0-.998-.811-1.809-1.809-1.809-.998 0-1.809.811-1.809 1.809m4.156-4.104c0 1.04.849 1.888 1.888 1.888 1.04 0 1.888-.849 1.888-1.888 0-1.04-.849-1.888-1.888-1.888-1.04 0-1.888.849-1.888 1.888m5.656 4.104c0 1.252.97 2.282 2.218 2.282 1.248 0 2.218-1.03 2.218-2.282 0-1.252-.97-2.282-2.218-2.282-1.248 0-2.218 1.03-2.218 2.282"/></svg>
+                ⬇ Download Android APK
+              </a>
+              <div className="p-3 rounded-lg bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#0D4B3C]/10 dark:border-[#C8A951]/10">
+                <p className="text-[11px] text-[#4A5568] dark:text-[#9CA3AF] leading-relaxed">
+                  <strong className="text-[#0D4B3C] dark:text-[#C8A951]">📱 Install steps:</strong>
+                  <br />1. Tap the download button above
+                  <br />2. Wait for the APK to download (~10 MB)
+                  <br />3. Tap &quot;Open&quot; in the download notification, or find it in your Files app
+                  <br />4. Tap <strong>Install</strong> (you may need to allow &quot;Install unknown apps&quot; for your browser)
+                  <br />5. Open Wird → Settings → enable Adhan Alarm 🔔
+                </p>
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] text-center">
+                🔔 Native app = Adhan alarms fire even when app is closed
+              </p>
+            </div>
+          )}
+
+          {/* iOS: PWA instructions (no APK for iOS) */}
+          {typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent) && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <strong>📱 iPhone install:</strong>
+                  <br />1. Tap the <strong>Share</strong> icon
+                  <svg viewBox="0 0 24 24" className="inline w-3.5 h-3.5 mx-0.5 -mt-0.5" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                  in Safari
+                  <br />2. Scroll down and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>
+                  <br />3. Tap <strong>Add</strong>
+                  <br /><br />
+                  ⚠️ Due to Apple restrictions, the native Android APK is not available for iPhone. The PWA (Add to Home Screen) gives you app-like experience with notifications when the app is open.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Desktop / other: show both options */}
+          {typeof navigator !== 'undefined' && !/android/i.test(navigator.userAgent) && !/iphone|ipad|ipod/i.test(navigator.userAgent) && (
+            <div className="space-y-3">
+              <a
+                href="https://github.com/MasjedulIslamNabi/wird/releases/latest/download/app-debug.apk"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-[#0D4B3C] hover:bg-[#0D4B3C]/90 text-white font-semibold text-sm shadow-lg transition-all active:scale-95"
+              >
+                ⬇ Download Android APK
+              </a>
+              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] text-center">
+                Scan the APK with your Android phone, or add this page to your home screen for the PWA version.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

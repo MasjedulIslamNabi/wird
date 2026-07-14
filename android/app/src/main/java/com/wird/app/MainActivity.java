@@ -14,17 +14,14 @@ public class MainActivity extends BridgeActivity {
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
-            // Enable hardware acceleration + DOM storage
+            // Enable DOM storage + database (needed for localStorage)
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
             // Enable JS + caching
             settings.setJavaScriptEnabled(true);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            settings.setAppCacheEnabled(true);
             // Geolocation
             settings.setGeolocationEnabled(true);
-            // Reduce motion: disable some rendering optimizations that cause jank
-            settings.setRenderFps(60);
             // Allow file access for local assets
             settings.setAllowFileAccess(true);
             settings.setAllowContentAccess(true);

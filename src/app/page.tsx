@@ -52,6 +52,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { isNative, scheduleAdhan, scheduleVerseReminder, schedulePrePrayerReminder, sendTestNotification, requestNotificationPermission, cancelAllNotifications } from '@/lib/native-notif';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 // ─── Error Boundary ────────────────────────────────────
 
@@ -2796,6 +2800,26 @@ export default function Home() {
     } catch { /* storage unavailable */ }
   }, []);
 
+  // ── Android native optimizations ──
+  useEffect(() => {
+    if (!isNative()) return;
+    // Set status bar color to match the app's emerald green header
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    StatusBar.setBackgroundColor({ color: '#0D4B3C' }).catch(() => {});
+    // Handle Android hardware back button — go back to Quran tab instead of exiting
+    const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else if (activeTab !== 'quran') {
+        setActiveTab('quran');
+        setSelectedSurah(null);
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+    return () => { backListener.then((h) => h.remove()); };
+  }, [activeTab]);
+
   // Persist bookmarks
   useEffect(() => {
     try {
@@ -3306,11 +3330,14 @@ export default function Home() {
     };
   }, []);
 
-  const toggleAdhanEnabled = useCallback(() => {
+  const toggleAdhanEnabled = useCallback(async () => {
     const next = !adhanEnabled;
     setAdhanEnabled(next);
     if (next) {
-      if ('Notification' in window && Notification.permission === 'default') {
+      if (isNative()) {
+        const granted = await requestNotificationPermission();
+        setNotifPermission(granted ? 'granted' : 'denied');
+      } else if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then((p) => setNotifPermission(p));
       }
     } else { stopAdhan(); }
@@ -3320,7 +3347,14 @@ export default function Home() {
     setAdhanEnabledPrayers((prev) => ({ ...prev, [name]: !prev[name] }));
   }, []);
 
-  const testAdhan = useCallback(() => { playAdhan('Dhuhr'); }, [playAdhan]);
+  const testAdhan = useCallback(async () => {
+    if (isNative()) {
+      // Native: request notification permission first, then play adhan
+      const granted = await requestNotificationPermission();
+      setNotifPermission(granted ? 'granted' : 'denied');
+    }
+    playAdhan('Dhuhr');
+  }, [playAdhan]);
 
   // ── SW message listener — handles action buttons from SW-based notifications ──
   // When the user taps "Stop Adhan" or "Play Adhan" on the notification, the SW
@@ -3510,7 +3544,20 @@ export default function Home() {
   }, []);
 
   // Send a verse notification immediately (used by both scheduler and Test button)
-  const sendVerseNotifNow = useCallback(() => {
+  // On native (Android), uses Capacitor LocalNotifications — fires even when app is killed.
+  // On web, falls back to the Web Notification API.
+  const sendVerseNotifNow = useCallback(async () => {
+    if (isNative()) {
+      // Native: use Capacitor local notifications
+      const verse = pickRandomVerse();
+      const { title, body, dir, lang } = buildVerseNotifBody(verse, verseNotifLanguage);
+      await sendTestNotification(title, body);
+      const now = Date.now();
+      lastVerseNotifTimeRef.current = now;
+      try { localStorage.setItem('wird-verse-notif-last', String(now)); } catch {}
+      return;
+    }
+    // Web fallback
     if (!notificationsActuallyWork()) return;
     const verse = pickRandomVerse();
     const { title, body, dir, lang } = buildVerseNotifBody(verse, verseNotifLanguage);
@@ -3562,11 +3609,14 @@ export default function Home() {
   }, [verseNotifEnabled, notifPermission, verseNotifInterval, sendVerseNotifNow]);
 
   // Toggle verse-notif (requests notification permission if needed)
-  const toggleVerseNotifEnabled = useCallback(() => {
+  const toggleVerseNotifEnabled = useCallback(async () => {
     const next = !verseNotifEnabled;
     setVerseNotifEnabled(next);
     if (next) {
-      if ('Notification' in window && Notification.permission === 'default') {
+      if (isNative()) {
+        const granted = await requestNotificationPermission();
+        setNotifPermission(granted ? 'granted' : 'denied');
+      } else if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then((p) => setNotifPermission(p));
       }
     }
@@ -3580,8 +3630,13 @@ export default function Home() {
     setVerseNotifLanguage(l);
   }, []);
 
-  const testVerseNotif = useCallback(() => {
-    if ('Notification' in window && Notification.permission !== 'granted') {
+  const testVerseNotif = useCallback(async () => {
+    if (isNative()) {
+      // Native: request permission via Capacitor, then send test notification
+      const granted = await requestNotificationPermission();
+      setNotifPermission(granted ? 'granted' : 'denied');
+      if (granted) await sendVerseNotifNow();
+    } else if ('Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission().then((p) => {
         setNotifPermission(p);
         if (p === 'granted') setTimeout(sendVerseNotifNow, 200);
@@ -3597,6 +3652,21 @@ export default function Home() {
       <IslamicHeader activeTab={activeTab} setActiveTab={setActiveTab} setSelectedSurah={setSelectedSurah} isDark={isDark} toggleTheme={toggleTheme} />
 
       {/* Main Content */}
+      {/* Persistent ContinuousPlayer — always mounted so audio keeps playing across tab switches.
+          Hidden when not on the Listen tab (MiniPlayer shows instead). */}
+      <div className={activeTab === 'listen' ? '' : 'hidden'}>
+        <ContinuousPlayer
+          globalPlayer={globalPlayer}
+          setGlobalPlayer={setGlobalPlayer}
+          globalAudioRef={globalAudioRef}
+          playerMeta={playerMeta}
+          setPlayerMeta={setPlayerMeta}
+          showToast={showToast}
+          autoPlaySurah={autoPlaySurah}
+          onAutoPlayConsumed={onAutoPlayConsumed}
+        />
+      </div>
+
       <main className={`flex-1 ${globalPlayer && activeTab !== 'listen' ? 'pb-36 md:pb-24' : 'pb-20 md:pb-4'}`}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -3607,18 +3677,7 @@ export default function Home() {
             transition={{ duration: 0.25, ease: 'easeInOut' }}
           >
             {activeTab === 'listen' && (
-              <TabErrorBoundary>
-                <ContinuousPlayer
-                  globalPlayer={globalPlayer}
-                  setGlobalPlayer={setGlobalPlayer}
-                  globalAudioRef={globalAudioRef}
-                  playerMeta={playerMeta}
-                  setPlayerMeta={setPlayerMeta}
-                  showToast={showToast}
-                  autoPlaySurah={autoPlaySurah}
-                  onAutoPlayConsumed={onAutoPlayConsumed}
-                />
-              </TabErrorBoundary>
+              <div className="hidden">{/* placeholder — ContinuousPlayer is rendered persistently below */}</div>
             )}
             {activeTab === 'quran' && (
               <TabErrorBoundary>

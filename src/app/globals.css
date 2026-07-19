@@ -440,3 +440,39 @@ button[class*="h-9"][class*="w-9"]:not([class*="h-11"]):not([class*="h-10"]) {
 .native-app .framer-motion-* {
   will-change: auto !important;
 }
+
+/* ─── Native WebView (Android) extreme performance mode ───────────────────
+   When the user-agent contains 'Android' or 'wv' (WebView), disable all
+   expensive CSS effects that cause jank in the Android WebView renderer. */
+@media (max-width: 1px) {
+  /* Dummy rule to ensure this block is always included */
+}
+
+/* Applied via JS: <html class="native-android"> */
+html.native-android,
+html.native-android * {
+  /* Disable backdrop-filter — extremely slow in WebView */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Disable box-shadow blurs (use solid borders instead) */
+  /* box-shadow: none !important; */ /* keep for visual quality */
+  /* Faster transitions */
+  transition-duration: 0.1s !important;
+  animation-duration: 0.2s !important;
+}
+
+html.native-android .install-banner-animate {
+  animation: none !important;
+}
+
+/* Disable smooth scrolling on native (causes jank in WebView) */
+html.native-android {
+  scroll-behavior: auto !important;
+}
+
+/* Reduce motion preference */
+html.native-android .motion-div,
+html.native-android .framer-motion {
+  will-change: auto !important;
+  transform: none !important;
+}

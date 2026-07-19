@@ -10,23 +10,42 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Optimize WebView for performance
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             WebSettings settings = webView.getSettings();
-            // Enable DOM storage + database (needed for localStorage)
+
+            // ── Performance optimizations ──
+            settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
-            // Enable JS + caching
-            settings.setJavaScriptEnabled(true);
+
+            // Aggressive caching: load from cache when available, fetch in background
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            // Geolocation
-            settings.setGeolocationEnabled(true);
-            // Allow file access for local assets
+
+            // Enable GPU compositing + hardware acceleration
+            webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
+
+            // Allow file access for local assets (Capacitor serves from file://)
             settings.setAllowFileAccess(true);
             settings.setAllowContentAccess(true);
-            // Mixed content (in case of HTTP resources)
+
+            // Geolocation
+            settings.setGeolocationEnabled(true);
+
+            // Mixed content compatibility
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+
+            // Disable user gestures check for media (helps autoplay)
+            settings.setMediaPlaybackRequiresUserGesture(false);
+
+            // Enable WebView debugging in debug builds (so we can use chrome://inspect)
+            if (BuildConfig.DEBUG) {
+                WebView.setWebContentsDebuggingEnabled(true);
+            }
+
+            // Preemptive: scroll smoothly + use wider viewport
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
         }
     }
 }

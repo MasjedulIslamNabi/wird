@@ -8,11 +8,13 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     captureInput: true,
-    webContentsDebuggingEnabled: false,
+    // Enable WebView debugging — can use chrome://inspect to profile the APK
+    webContentsDebuggingEnabled: true,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1500,
+      // Shorter splash — let the app take over sooner
+      launchShowDuration: 800,
       backgroundColor: '#0D4B3C',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,

@@ -2,6 +2,13 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+// On native (Android WebView), framer-motion causes severe jank. Use plain divs instead.
+const MotionDiv = (typeof window !== 'undefined' && /Android|wv/i.test(navigator.userAgent))
+  ? ((props: any) => <div {...props}>{props.children}</div>) as typeof motion.div
+  : motion.div;
+const UseAnimatePresence = (typeof window !== 'undefined' && /Android|wv/i.test(navigator.userAgent))
+  ? (({ children }: any) => <>{children}</>) as typeof AnimatePresence
+  : AnimatePresence;
 import { Coordinates as AdhanCoordinates, PrayerTimes as AdhanPrayerTimes, CalculationMethod as AdhanCalculationMethod, Madhab as AdhanMadhab } from 'adhan';
 import {
   Moon,
@@ -2753,14 +2760,14 @@ function useToast() {
   }, []);
 
   const ToastComponent = toast.visible ? (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#0D4B3C] text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium dark:bg-[#C8A951] dark:text-[#0F1A14]"
     >
       {toast.message}
-    </motion.div>
+    </MotionDiv>
   ) : null;
 
   return { showToast, ToastComponent };
@@ -2804,8 +2811,8 @@ export default function Home() {
   // ── Android native optimizations ──
   useEffect(() => {
     if (!isNative()) return;
-    // Add 'native-app' class to <html> for CSS performance optimizations
-    document.documentElement.classList.add('native-app');
+    // Add 'native-app' + 'native-android' classes to <html> for CSS performance optimizations
+    document.documentElement.classList.add('native-app', 'native-android');
     // Set status bar color to match the app's emerald green header
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     StatusBar.setBackgroundColor({ color: '#0D4B3C' }).catch(() => {});
@@ -3703,8 +3710,8 @@ export default function Home() {
       </div>
 
       <main className={`flex-1 ${globalPlayer && activeTab !== 'listen' ? 'pb-36 md:pb-24' : 'pb-20 md:pb-4'}`}>
-        <AnimatePresence mode="wait">
-          <motion.div
+        <UseAnimatePresence mode="wait">
+          <MotionDiv
             key={activeTab + (selectedSurah ?? '')}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -3811,8 +3818,8 @@ export default function Home() {
                 <ProphetStories />
               </TabErrorBoundary>
             )}
-          </motion.div>
-        </AnimatePresence>
+          </MotionDiv>
+        </UseAnimatePresence>
       </main>
 
       {/* Mini Player (persistent across tabs) */}
@@ -3828,20 +3835,20 @@ export default function Home() {
       {/* Adhan Alarm Overlay — full-screen modal when Adhan is playing */}
       {activeAdhan && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <motion.div
+          <MotionDiv
             initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="relative w-full max-w-md bg-gradient-to-br from-[#0D4B3C] to-[#0A2A1F] rounded-3xl shadow-2xl overflow-hidden border-2 border-[#C8A951]/40"
           >
             <div className="h-2 bg-gradient-to-r from-[#C8A951] via-[#F4D785] to-[#C8A951]" />
             <div className="flex justify-center pt-8 pb-2">
-              <motion.div
+              <MotionDiv
                 animate={{ scale: [1, 1.08, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 className="w-24 h-24 rounded-full bg-gradient-to-br from-[#C8A951]/30 to-[#0D4B3C]/40 flex items-center justify-center border-2 border-[#C8A951]/50 shadow-[0_0_40px_rgba(200,169,81,0.4)]"
               >
                 <span className="text-5xl">🕌</span>
-              </motion.div>
+              </MotionDiv>
             </div>
             <div className="px-6 pb-8 pt-4 text-center">
               <p className="text-[#C8A951]/80 text-xs uppercase tracking-widest font-semibold mb-1">Prayer Time</p>
@@ -3852,7 +3859,7 @@ export default function Home() {
               </p>
               <div className="flex items-center justify-center gap-1.5 mb-6">
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <motion.div
+                  <MotionDiv
                     key={i}
                     animate={{ height: [8, 28, 8] }}
                     transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: 'easeInOut' }}
@@ -3868,7 +3875,7 @@ export default function Home() {
               </button>
               <p className="text-white/40 text-[10px] mt-3">Hayya &apos;ala-s-Salah · Hayya &apos;ala-l-Falah</p>
             </div>
-          </motion.div>
+          </MotionDiv>
         </div>
       )}
 
@@ -4446,7 +4453,7 @@ function SurahReader({
       {/* Full Text View */}
       <div className="space-y-4">
         {arabicVerses.map((ayah, idx) => (
-          <motion.div
+          <MotionDiv
             key={ayah.number}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -4517,7 +4524,7 @@ function SurahReader({
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </MotionDiv>
         ))}
       </div>
     </div>
@@ -5002,13 +5009,13 @@ function ContinuousPlayer({
     <div className="max-w-4xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="text-center mb-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <MotionDiv initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[#0D4B3C] to-[#1B6B52] dark:from-[#C8A951]/20 dark:to-[#C8A951]/5 flex items-center justify-center shadow-lg">
             <Headphones className="w-8 h-8 text-[#C8A951]" />
           </div>
           <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Quran Radio</h2>
           <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Listen to the Noble Quran continuously</p>
-        </motion.div>
+        </MotionDiv>
       </div>
 
       {/* Search Surahs */}
@@ -5180,7 +5187,7 @@ function ContinuousPlayer({
 
       {/* Now Playing */}
       {isPlaying && currentAyahAbsolute > 0 && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-4"
@@ -5190,7 +5197,7 @@ function ContinuousPlayer({
             <CardContent className="p-5">
               {/* Progress Bar */}
               <div className="w-full h-1.5 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden mb-5">
-                <motion.div
+                <MotionDiv
                   className="h-full bg-gradient-to-r from-[#C8A951] to-[#D4B96A] rounded-full"
                   style={{ width: `${progress}%` }}
                 />
@@ -5291,7 +5298,7 @@ function ContinuousPlayer({
           </Card>
 
           {/* Caption Card */}
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.3 }}
@@ -5319,8 +5326,8 @@ function ContinuousPlayer({
 
                 {/* Animated Caption Text */}
                 <div className="min-h-[80px] flex items-center justify-center">
-                  <AnimatePresence mode="wait">
-                    <motion.div
+                  <UseAnimatePresence mode="wait">
+                    <MotionDiv
                       key={captionKey}
                       initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
                       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
@@ -5343,8 +5350,8 @@ function ContinuousPlayer({
                           {captionTexts.bangla}
                         </p>
                       )}
-                    </motion.div>
-                  </AnimatePresence>
+                    </MotionDiv>
+                  </UseAnimatePresence>
                 </div>
 
                 {/* Ayah indicator */}
@@ -5356,23 +5363,23 @@ function ContinuousPlayer({
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
       )}
 
       {/* Play Button */}
       {!isPlaying && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <button
             onClick={() => startPlaying(0)}
             className="w-full py-5 rounded-2xl bg-gradient-to-r from-[#0D4B3C] via-[#145A48] to-[#1B6B52] dark:from-[#C8A951] dark:via-[#D4B96A] dark:to-[#C8A951] text-white dark:text-[#0D4B3C] font-bold text-base shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-3 group"
           >
-            <motion.div
+            <MotionDiv
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
               <Play className="w-6 h-6 ml-1" />
-            </motion.div>
+            </MotionDiv>
             {playMode === 'single'
               ? `Play Surah ${surahs[selectedSurah - 1]?.englishName}`
               : playMode === 'range'
@@ -5381,7 +5388,7 @@ function ContinuousPlayer({
             }
             <span className="text-xs opacity-70 font-normal">• {selectedReciter.shortName}</span>
           </button>
-        </motion.div>
+        </MotionDiv>
       )}
     </div>
   );
@@ -5544,7 +5551,7 @@ function MiniPlayer({
   };
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ y: 80 }}
       animate={{ y: 0 }}
       className="fixed bottom-16 md:bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1a2420] border-t border-[#C8A951]/20 shadow-2xl"
@@ -5597,7 +5604,7 @@ function MiniPlayer({
           </button>
         </div>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }
 
@@ -6341,14 +6348,14 @@ function MoodQuiz({
     <div className="space-y-4">
       {/* Idle State — Full Hero */}
       {phase === 'idle' && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
           className="relative -mx-4 -mt-6 sm:-mx-6"
           style={{ minHeight: 'calc(100dvh - 8rem)' }}
         >
-          <motion.div
+          <MotionDiv
             className="relative h-full min-h-[calc(100dvh-8rem)] flex flex-col items-center justify-center cursor-pointer px-6 py-12 overflow-hidden"
             onClick={handleStart}
             whileTap={{ scale: 0.995 }}
@@ -6369,46 +6376,46 @@ function MoodQuiz({
             <div className="absolute top-1/3 right-1/6 w-1 h-1 rounded-full bg-[#C8A951]/50 dark:bg-[#C8A951]/25 animate-[pulse_4s_ease-in-out_infinite_1s]" />
 
             {/* Floating sparkles */}
-            <motion.div
+            <MotionDiv
               className="absolute top-[15%] right-[10%] text-[#C8A951]/40 dark:text-[#C8A951]/20"
               animate={{ y: [-6, 6, -6], rotate: [0, 20, 0], opacity: [0.3, 0.7, 0.3] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
             >
               <Sparkles className="w-6 h-6" />
-            </motion.div>
-            <motion.div
+            </MotionDiv>
+            <MotionDiv
               className="absolute bottom-[20%] left-[8%] text-[#C8A951]/30 dark:text-[#C8A951]/15"
               animate={{ y: [4, -4, 4], rotate: [0, -15, 0], opacity: [0.2, 0.5, 0.2] }}
               transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
             >
               <Star className="w-5 h-5" />
-            </motion.div>
-            <motion.div
+            </MotionDiv>
+            <MotionDiv
               className="absolute top-[60%] right-[15%] text-[#C8A951]/25 dark:text-[#C8A951]/10"
               animate={{ y: [-3, 7, -3], opacity: [0.15, 0.4, 0.15] }}
               transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
             >
               <Sparkles className="w-4 h-4" />
-            </motion.div>
-            <motion.div
+            </MotionDiv>
+            <MotionDiv
               className="absolute top-[25%] left-[20%] text-[#C8A951]/20 dark:text-[#C8A951]/10"
               animate={{ y: [5, -5, 5], rotate: [0, 10, 0] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
             >
               <Star className="w-3 h-3" />
-            </motion.div>
+            </MotionDiv>
 
             {/* Main content */}
             <div className="relative z-10 text-center max-w-lg mx-auto">
               {/* Pulsing heart icon with glow ring */}
-              <motion.div
+              <MotionDiv
                 className="mx-auto mb-8"
                 animate={{ scale: [1, 1.08, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
               >
                 <div className="relative">
                   {/* Outer glow */}
-                  <motion.div
+                  <MotionDiv
                     className="absolute -inset-3 rounded-full bg-[#C8A951]/20 dark:bg-[#C8A951]/10 blur-lg"
                     animate={{ opacity: [0.4, 0.8, 0.4], scale: [0.95, 1.05, 0.95] }}
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -6418,7 +6425,7 @@ function MoodQuiz({
                     <Heart className="w-12 h-12 text-[#C8A951]" />
                   </div>
                 </div>
-              </motion.div>
+              </MotionDiv>
 
               {/* Arabic Bismillah */}
               <p className="font-arabic text-xl text-white/40 mb-6 leading-[2.4]">
@@ -6448,7 +6455,7 @@ function MoodQuiz({
               </motion.p>
 
               {/* CTA Button */}
-              <motion.div
+              <MotionDiv
                 className="inline-flex items-center gap-3 bg-[#C8A951] text-[#0D4B3C] px-8 py-4 rounded-2xl font-bold text-base shadow-xl shadow-[#C8A951]/20 hover:shadow-2xl hover:shadow-[#C8A951]/30 transition-all duration-300 group"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -6459,10 +6466,10 @@ function MoodQuiz({
                 <Sparkles className="w-5 h-5" />
                 Start Now
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.div>
+              </MotionDiv>
 
               {/* Trust indicators */}
-              <motion.div
+              <MotionDiv
                 className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-white/30 text-xs"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -6476,15 +6483,15 @@ function MoodQuiz({
                 <span>7 Questions</span>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span>Takes 1 minute</span>
-              </motion.div>
+              </MotionDiv>
             </div>
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
       )}
 
       {/* Quiz State */}
       {phase === 'quiz' && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
@@ -6510,7 +6517,7 @@ function MoodQuiz({
                     </span>
                   </div>
                   <div className="w-full h-2 bg-[#E5E1D8] dark:bg-[#2D3E34] rounded-full overflow-hidden">
-                    <motion.div
+                    <MotionDiv
                       className="h-full bg-gradient-to-r from-[#C8A951] to-[#D4B96A] rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${((currentQuestion + 1) / MOOD_QUESTIONS.length) * 100}%` }}
@@ -6520,8 +6527,8 @@ function MoodQuiz({
                 </div>
 
                 {/* Question */}
-                <AnimatePresence mode="wait">
-                  <motion.div
+                <UseAnimatePresence mode="wait">
+                  <MotionDiv
                     key={currentQuestion}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -6553,17 +6560,17 @@ function MoodQuiz({
                         </motion.button>
                       ))}
                     </div>
-                  </motion.div>
-                </AnimatePresence>
+                  </MotionDiv>
+                </UseAnimatePresence>
               </CardContent>
             </Card>
           </div>
-        </motion.div>
+        </MotionDiv>
       )}
 
       {/* Results State */}
       {phase === 'results' && result && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -6575,14 +6582,14 @@ function MoodQuiz({
             <Card className="overflow-hidden shadow-xl border-0 bg-white dark:bg-[#1a2420]">
               <div className="h-1.5 bg-gradient-to-r from-[#C8A951] via-[#D4B96A] to-[#C8A951]" />
               <CardContent className="p-6 sm:p-8 text-center">
-                <motion.div
+                <MotionDiv
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
                   className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#C8A951] to-[#A68B3A] flex items-center justify-center shadow-lg shadow-[#C8A951]/20"
                 >
                   <Heart className="w-8 h-8 text-white" />
-                </motion.div>
+                </MotionDiv>
 
                 <Badge className="mb-3 bg-[#C8A951]/10 text-[#A68B3A] dark:bg-[#C8A951]/10 dark:text-[#C8A951] text-xs px-3 py-1">
                   {MOOD_LABELS[result.primaryMood].label}
@@ -6648,7 +6655,7 @@ function MoodQuiz({
               </h3>
               <div className="space-y-3">
                 {result.quotes.map((quote, idx) => (
-                  <motion.div
+                  <MotionDiv
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -6679,7 +6686,7 @@ function MoodQuiz({
                         </p>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </MotionDiv>
                 ))}
               </div>
             </div>
@@ -6693,7 +6700,7 @@ function MoodQuiz({
                 </h3>
                 <div className="space-y-3">
                   {MOOD_SURAHS[result.primaryMood].map((s, idx) => (
-                    <motion.div
+                    <MotionDiv
                       key={s.surahNumber}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -6722,13 +6729,13 @@ function MoodQuiz({
                           </div>
                         </CardContent>
                       </Card>
-                    </motion.div>
+                    </MotionDiv>
                   ))}
                 </div>
               </div>
             )}
           </div>
-        </motion.div>
+        </MotionDiv>
       )}
     </div>
   );
@@ -6969,7 +6976,7 @@ function DailyMotivation({
   return (
     <div className="max-w-4xl mx-auto">
       {/* ─── Islamic Date & Next Prayer Dashboard ─── */}
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -6997,10 +7004,10 @@ function DailyMotivation({
             )}
           </div>
         </Card>
-      </motion.div>
+      </MotionDiv>
 
       {/* ─── Prayer Times Widget ─── */}
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -7086,7 +7093,7 @@ function DailyMotivation({
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </MotionDiv>
 
       {/* ★ MAIN HERO: Mood-Based Spiritual Guidance ★ */}
       <MoodQuiz showToast={showToast} arabicFontSize={arabicFontSize} onNavigateToListen={onNavigateToListen} />
@@ -7095,7 +7102,7 @@ function DailyMotivation({
       <div className="px-4 pb-6 sm:px-6 space-y-6">
 
         {/* Daily Verse Card */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5 }}
@@ -7127,7 +7134,7 @@ function DailyMotivation({
                   </Button>
                 </div>
               ) : dailyVerse ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                <MotionDiv initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
                   <div className="bismillah mb-4 text-sm">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                   <div dir="rtl" lang="ar" className={`font-arabic text-[#0D4B3C] dark:text-[#E8E0D0] text-center mb-4 leading-[2.4] ${arabicFontSize === 'sm' ? 'text-lg' : arabicFontSize === 'lg' ? 'text-2xl' : 'text-xl'}`}>
                     {dailyVerse.arabic}
@@ -7153,14 +7160,14 @@ function DailyMotivation({
                       <Share2 className="w-3 h-3" /> Share
                     </Button>
                   </div>
-                </motion.div>
+                </MotionDiv>
               ) : null}
             </CardContent>
           </Card>
-        </motion.div>
+        </MotionDiv>
 
         {/* Hadith Card */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25, duration: 0.5 }}
@@ -7188,10 +7195,10 @@ function DailyMotivation({
               <p className="text-[10px] text-[#C8A951] mt-3 font-medium">— {dailyHadith.source}</p>
             </CardContent>
           </Card>
-        </motion.div>
+        </MotionDiv>
 
         {/* More Hadiths */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.5 }}
@@ -7204,7 +7211,7 @@ function DailyMotivation({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {BUNDLED_HADITHS.slice(0, 4).map((h, idx) => (
-              <motion.div
+              <MotionDiv
                 key={idx}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -7216,13 +7223,13 @@ function DailyMotivation({
                   </p>
                   <p className="text-[10px] text-[#C8A951] font-medium">— {h.source}</p>
                 </Card>
-              </motion.div>
+              </MotionDiv>
             ))}
           </div>
-        </motion.div>
+        </MotionDiv>
 
         {/* ─── Duas for Your Moment ─── */}
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.5 }}
@@ -7266,12 +7273,12 @@ function DailyMotivation({
           </div>
 
           {/* Expanded Situation Duas */}
-          <AnimatePresence>
+          <UseAnimatePresence>
             {selectedSituation && (() => {
               const sitData = SITUATION_DUAS.find(s => s.situation === selectedSituation);
               if (!sitData) return null;
               return (
-                <motion.div
+                <MotionDiv
                   key={selectedSituation}
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -7281,7 +7288,7 @@ function DailyMotivation({
                 >
                   <div className="space-y-3 mt-1">
                     {sitData.duas.map((dua, idx) => (
-                      <motion.div
+                      <MotionDiv
                         key={dua.id}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -7312,12 +7319,12 @@ function DailyMotivation({
                                       }`}
                                     >
                                       {isSitSpeaking && sitSpeakingLang === 'ar' ? (
-                                        <motion.div
+                                        <MotionDiv
                                           animate={{ scale: [1, 1.2, 1] }}
                                           transition={{ repeat: Infinity, duration: 1 }}
                                         >
                                           <Pause className="w-3 h-3" />
-                                        </motion.div>
+                                        </MotionDiv>
                                       ) : (
                                         <Volume2 className="w-3 h-3" />
                                       )}
@@ -7375,17 +7382,17 @@ function DailyMotivation({
                             {/* Speaking Indicator */}
                             {isSitSpeaking && (
                               <div className="flex items-center gap-1.5 mb-2">
-                                <motion.div
+                                <MotionDiv
                                   className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
                                   animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
                                   transition={{ repeat: Infinity, duration: 0.8 }}
                                 />
-                                <motion.div
+                                <MotionDiv
                                   className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
                                   animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
                                   transition={{ repeat: Infinity, duration: 0.8, delay: 0.2 }}
                                 />
-                                <motion.div
+                                <MotionDiv
                                   className="w-1.5 h-1.5 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]"
                                   animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
                                   transition={{ repeat: Infinity, duration: 0.8, delay: 0.4 }}
@@ -7425,14 +7432,14 @@ function DailyMotivation({
                             </div>
                           </CardContent>
                         </Card>
-                      </motion.div>
+                      </MotionDiv>
                     ))}
                   </div>
-                </motion.div>
+                </MotionDiv>
               );
             })()}
-          </AnimatePresence>
-        </motion.div>
+          </UseAnimatePresence>
+        </MotionDiv>
       </div>
     </div>
   );
@@ -7978,7 +7985,7 @@ function ProphetStories() {
   if (selectedStory) {
     return (
       <div className="max-w-4xl mx-auto">
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
@@ -8039,9 +8046,9 @@ function ProphetStories() {
                     </span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${expandedLessons ? 'rotate-180' : ''}`} />
                   </button>
-                  <AnimatePresence>
+                  <UseAnimatePresence>
                     {expandedLessons && (
-                      <motion.div
+                      <MotionDiv
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -8058,9 +8065,9 @@ function ProphetStories() {
                             </div>
                           ))}
                         </div>
-                      </motion.div>
+                      </MotionDiv>
                     )}
-                  </AnimatePresence>
+                  </UseAnimatePresence>
                   {!expandedLessons && (
                     <div className="space-y-3">
                       <div className="flex gap-3 items-start p-3 rounded-xl bg-[#0D4B3C]/5 dark:bg-[#C8A951]/5 border border-[#E5E1D8]/50 dark:border-[#2D3E34]/50">
@@ -8117,7 +8124,7 @@ function ProphetStories() {
               ))}
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
       </div>
     );
   }
@@ -8127,7 +8134,7 @@ function ProphetStories() {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="px-4 pt-4 pb-2 sm:px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-xl bg-[#0D4B3C]/10 dark:bg-[#C8A951]/10 flex items-center justify-center">
               <ScrollText className="w-5 h-5 text-[#0D4B3C] dark:text-[#C8A951]" />
@@ -8137,14 +8144,14 @@ function ProphetStories() {
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Qisas al-Anbiya — Timeless lessons from the greatest lives</p>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
       </div>
 
       {/* Story Cards Grid */}
       <div className="px-4 pb-6 sm:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {PROPHET_STORIES.map((story, index) => (
-            <motion.div
+            <MotionDiv
               key={story.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -8184,7 +8191,7 @@ function ProphetStories() {
                   </CardContent>
                 </Card>
               </button>
-            </motion.div>
+            </MotionDiv>
           ))}
         </div>
       </div>
@@ -8223,7 +8230,7 @@ function BookmarksView({
       </div>
 
       {bookmarks.length === 0 ? (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center py-16"
@@ -8241,11 +8248,11 @@ function BookmarksView({
           <p className="text-xs text-[#6B7280] mt-1 italic">
             &ldquo;And We have certainly made the Quran easy for remembrance&rdquo; — Quran 54:17
           </p>
-        </motion.div>
+        </MotionDiv>
       ) : (
         <div className="space-y-3">
           {bookmarks.map((bookmark, idx) => (
-            <motion.div
+            <MotionDiv
               key={`${bookmark.surahNumber}-${bookmark.ayahNumber}-${idx}`}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -8312,7 +8319,7 @@ function BookmarksView({
                   </p>
                 </CardContent>
               </Card>
-            </motion.div>
+            </MotionDiv>
           ))}
         </div>
       )}
@@ -9049,13 +9056,13 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="text-center mb-6">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <MotionDiv initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[#C8A951]/20 to-[#C8A951]/5 dark:from-[#C8A951]/20 dark:to-[#C8A951]/5 flex items-center justify-center shadow-lg">
               <HandHeart className="w-8 h-8 text-[#C8A951]" />
             </div>
             <h2 className="text-2xl font-bold text-[#0D4B3C] dark:text-[#C8A951]">Daily Duas</h2>
             <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF] mt-1">Essential supplications for every moment of your day</p>
-          </motion.div>
+          </MotionDiv>
         </div>
 
         {/* Search */}
@@ -9113,7 +9120,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
 
         <div className="space-y-3">
           {filteredDuas.map((dua, index) => (
-            <motion.div
+            <MotionDiv
               key={dua.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -9143,9 +9150,9 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
                       {/* Speaking indicator */}
                       {isSpeaking && speakingLang === 'ar' && (
                         <div className="flex items-center gap-0.5">
-                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6 }} />
-                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} />
-                          <motion.div className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} />
+                          <MotionDiv className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6 }} />
+                          <MotionDiv className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} />
+                          <MotionDiv className="w-1 h-1 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} />
                         </div>
                       )}
                       {/* Play/Pause Button */}
@@ -9175,7 +9182,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </MotionDiv>
           ))}
           {filteredDuas.length === 0 && (
             <div className="text-center py-10">
@@ -9212,7 +9219,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
       </div>
 
       {/* Dua Card */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="overflow-hidden border-2 border-[#C8A951]/20 shadow-lg mb-4">
           <div className="h-1.5 bg-gradient-to-r from-[#0D4B3C] via-[#C8A951] to-[#0D4B3C]" />
           <CardContent className="p-6">
@@ -9239,9 +9246,9 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
                   }`}
                 >
                   {isSpeaking && speakingLang === 'ar' ? (
-                    <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
+                    <MotionDiv animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
                       <Pause className="w-4 h-4" />
-                    </motion.div>
+                    </MotionDiv>
                   ) : (
                     <Volume2 className="w-4 h-4" />
                   )}
@@ -9287,9 +9294,9 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
               {isSpeaking && (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
-                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7 }} />
-                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.15 }} />
-                    <motion.div className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.3 }} />
+                    <MotionDiv className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7 }} />
+                    <MotionDiv className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.15 }} />
+                    <MotionDiv className="w-2 h-2 rounded-full bg-[#0D4B3C] dark:bg-[#C8A951]" animate={{ scale: [1, 1.6, 1], opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 0.7, delay: 0.3 }} />
                   </div>
                   <span className="text-[11px] text-[#0D4B3C] dark:text-[#C8A951] font-medium">
                     {speakingLang === 'ar' ? 'Reciting Arabic...' : speakingLang === 'en' ? 'Speaking English...' : 'বাংলায় পড়ছি...'}
@@ -9343,8 +9350,8 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
             </div>
 
             {/* Content */}
-            <AnimatePresence mode="wait">
-              <motion.div
+            <UseAnimatePresence mode="wait">
+              <MotionDiv
                 key={captionLanguage}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -9363,8 +9370,8 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
                 ) : (
                   <p className="text-base text-[#4A5568] dark:text-[#B0B8C0] leading-relaxed text-center px-2">{selectedDua.bangla}</p>
                 )}
-              </motion.div>
-            </AnimatePresence>
+              </MotionDiv>
+            </UseAnimatePresence>
 
             {/* Reference */}
             <div className="mt-6 pt-4 border-t border-[#E5E1D8] dark:border-[#2D3E34]">
@@ -9374,7 +9381,7 @@ function DuaCollection({ showToast }: { showToast: (msg: string) => void }) {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </MotionDiv>
 
       {/* All Languages Preview */}
       <Card className="overflow-hidden mb-4 border border-[#E5E1D8] dark:border-[#2D3E34]">

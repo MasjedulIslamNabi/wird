@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
 import com.getcapacitor.BridgeActivity;
-import com.wird.app.BuildConfig;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -39,10 +38,8 @@ public class MainActivity extends BridgeActivity {
             // Disable user gestures check for media (helps autoplay)
             settings.setMediaPlaybackRequiresUserGesture(false);
 
-            // Enable WebView debugging in debug builds (so we can use chrome://inspect)
-            if (BuildConfig.DEBUG) {
-                WebView.setWebContentsDebuggingEnabled(true);
-            }
+            // Enable WebView debugging (use chrome://inspect to profile the APK)
+            WebView.setWebContentsDebuggingEnabled(true);
 
             // Preemptive: scroll smoothly + use wider viewport
             settings.setUseWideViewPort(true);

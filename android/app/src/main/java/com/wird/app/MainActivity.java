@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
 import com.getcapacitor.BridgeActivity;
+import com.wird.app.BuildConfig;
 
 public class MainActivity extends BridgeActivity {
     @Override
